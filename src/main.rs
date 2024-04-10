@@ -64,12 +64,9 @@ fn main() {
     // generate ARM64 assembly
     println!("Generating ARM64 assembly...");
     let mut generator = Generator::new();
-    match generator.generate(&node_prog) {
-        Ok(()) => (),
-        Err(e) => {
-            println!("Failed to generate code for {}: {}", filepath_str, e);
-            return;
-        }
+    if let Err(e) = generator.generate(&node_prog) {
+        println!("Failed to generate code for {}: {}", filepath_str, e);
+        return;
     }
 
     // write assembly to out.s
@@ -77,7 +74,7 @@ fn main() {
         Some(path) => format!("{}.s", path),
         None => "out.s".to_owned(),
     };
-    println!("Writing assembly to {}...", asm_filepath);
+    println!("Writing assembly to {}...", &asm_filepath);
     if let Err(e) = std::fs::write(&asm_filepath, generator.output()) {
         println!("Failed to write assembly to {}: {}", asm_filepath, e);
     }
