@@ -29,10 +29,9 @@ impl NodeTerm {
                         num_1, op, num_2,
                     )),
                 },
-                NodeTerm::Bool(bl) => Err(format!(
-                    "invalid binary operation: {} {} {}",
-                    num_1, op, bl,
-                )),
+                NodeTerm::Bool(bl) => {
+                    Err(format!("invalid binary operation: {} {} {}", num_1, op, bl,))
+                }
                 NodeTerm::Ident(_) => Ok(None),
                 NodeTerm::Paren(_) => Ok(None),
             },
@@ -47,10 +46,9 @@ impl NodeTerm {
                         bl_1, op, bl_2,
                     )),
                 },
-                NodeTerm::IntLit(num) => Err(format!(
-                    "invalid binary operation: {} {} {}",
-                    bl_1, op, num,
-                )),
+                NodeTerm::IntLit(num) => {
+                    Err(format!("invalid binary operation: {} {} {}", bl_1, op, num,))
+                }
                 NodeTerm::Ident(_) => Ok(None),
                 NodeTerm::Paren(_) => Ok(None),
             },
@@ -112,7 +110,10 @@ impl BinOp {
             BinOp::Div => Ok("udiv"),
             BinOp::And => Ok("and"),
             BinOp::Or => Ok("orr"),
-            _ => Err(format!("binary operator doens't have instruction: {}", self)),
+            _ => Err(format!(
+                "binary operator doens't have instruction: {}",
+                self
+            )),
         }
     }
 
@@ -129,18 +130,22 @@ impl BinOp {
 
 impl std::fmt::Display for BinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            BinOp::Add => "+",
-            BinOp::Sub => "-",
-            BinOp::Mul => "*",
-            BinOp::Div => "/",
-            BinOp::Eq => "==",
-            BinOp::Ne => "!=",
-            BinOp::Gt => ">",
-            BinOp::Lt => "<",
-            BinOp::And => "&&",
-            BinOp::Or => "||",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                BinOp::Add => "+",
+                BinOp::Sub => "-",
+                BinOp::Mul => "*",
+                BinOp::Div => "/",
+                BinOp::Eq => "==",
+                BinOp::Ne => "!=",
+                BinOp::Gt => ">",
+                BinOp::Lt => "<",
+                BinOp::And => "&&",
+                BinOp::Or => "||",
+            }
+        )
     }
 }
 

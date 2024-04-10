@@ -1,5 +1,5 @@
+use phf::{phf_map, Map};
 use std::mem;
-use phf::{Map, phf_map};
 
 use super::token::Token;
 
@@ -89,7 +89,7 @@ impl TokenBuf {
                 };
                 self.reset();
                 Token::Int32(num)
-            },
+            }
             BufType::Word => {
                 if let Some(token) = KEYWORDS.get(&self.buf) {
                     // check if string is keyword
@@ -133,46 +133,54 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
             ')' => Some(Token::CloseParen),
             '{' => Some(Token::OpenCurly),
             '}' => Some(Token::CloseCurly),
-            '=' => if let Some(next_c) = iter.peek() {
-                if *next_c == '=' {
-                    iter.next();
-                    Some(Token::Equality)
+            '=' => {
+                if let Some(next_c) = iter.peek() {
+                    if *next_c == '=' {
+                        iter.next();
+                        Some(Token::Equality)
+                    } else {
+                        Some(Token::Equals)
+                    }
                 } else {
                     Some(Token::Equals)
                 }
-            } else {
-                Some(Token::Equals)
-            },
-            '!' => if let Some(next_c) = iter.peek() {
-                if *next_c == '=' {
-                    iter.next();
-                    Some(Token::NonEquality)
+            }
+            '!' => {
+                if let Some(next_c) = iter.peek() {
+                    if *next_c == '=' {
+                        iter.next();
+                        Some(Token::NonEquality)
+                    } else {
+                        return Err("unexpected token: `!`".to_owned());
+                    }
                 } else {
                     return Err("unexpected token: `!`".to_owned());
                 }
-            } else {
-                return Err("unexpected token: `!`".to_owned());
-            },
-            '&' => if let Some(next_c) = iter.peek() {
-                if *next_c == '&' {
-                    iter.next();
-                    Some(Token::And)
+            }
+            '&' => {
+                if let Some(next_c) = iter.peek() {
+                    if *next_c == '&' {
+                        iter.next();
+                        Some(Token::And)
+                    } else {
+                        return Err("unexpected token: `&`".to_owned());
+                    }
                 } else {
                     return Err("unexpected token: `&`".to_owned());
                 }
-            } else {
-                return Err("unexpected token: `&`".to_owned());
-            },
-            '|' => if let Some(next_c) = iter.peek() {
-                if *next_c == '|' {
-                    iter.next();
-                    Some(Token::Or)
+            }
+            '|' => {
+                if let Some(next_c) = iter.peek() {
+                    if *next_c == '|' {
+                        iter.next();
+                        Some(Token::Or)
+                    } else {
+                        return Err("unexpected token: `|`".to_owned());
+                    }
                 } else {
                     return Err("unexpected token: `|`".to_owned());
                 }
-            } else {
-                return Err("unexpected token: `|`".to_owned());
-            },
+            }
             _ => None,
         };
         match token {
@@ -181,7 +189,7 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
                     tokens.push(buf.extract_token());
                 }
                 tokens.push(token);
-            },
+            }
             None => {
                 buf.push(c)?;
             }

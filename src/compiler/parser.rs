@@ -49,7 +49,7 @@ impl<'a> Parser<'a> {
             Token::Int32(int_lit) => {
                 self.advance();
                 Ok(NodeTerm::IntLit(int_lit))
-            },
+            }
             Token::Bool(bl_lit) => {
                 self.advance();
                 Ok(NodeTerm::Bool(bl_lit))
@@ -57,7 +57,7 @@ impl<'a> Parser<'a> {
             Token::Ident(ident) => {
                 self.advance();
                 Ok(NodeTerm::Ident(ident))
-            },
+            }
             Token::OpenParen => {
                 self.advance();
                 let expr = self.parse_expr(0)?;
@@ -67,7 +67,7 @@ impl<'a> Parser<'a> {
                     NodeExpr::Term(term) => Ok(term),
                     NodeExpr::BinOp(_) => Ok(NodeTerm::Paren(Box::new(expr))),
                 }
-            },
+            }
             _ => Err(format!("expected term, found: {:?}", token)),
         }
     }
@@ -182,18 +182,24 @@ impl<'a> Parser<'a> {
         let expr = self.parse_expr(0)?;
         // check that term can be bool
         if let NodeExpr::Term(NodeTerm::IntLit(_)) = expr {
-            return Err(format!(
-                "invalid conditional expression: {}", expr,
-            ));
+            return Err(format!("invalid conditional expression: {}", expr,));
         }
         let scope = self.parse_scope()?;
         if let Some(Token::Else) = self.peek() {
             // iterate over `else`
             self.advance();
             let else_scope = self.parse_scope()?;
-            Ok(NodeCondition { expr, scope, else_scope: Some(else_scope) })
+            Ok(NodeCondition {
+                expr,
+                scope,
+                else_scope: Some(else_scope),
+            })
         } else {
-            Ok(NodeCondition { expr, scope, else_scope: None })
+            Ok(NodeCondition {
+                expr,
+                scope,
+                else_scope: None,
+            })
         }
     }
 

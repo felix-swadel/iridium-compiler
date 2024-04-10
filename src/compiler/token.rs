@@ -71,8 +71,7 @@ impl Token {
         match self {
             Token::Or => Some(0),
             Token::And => Some(1),
-            Token::Equality | Token::NonEquality |
-            Token::GreaterThan | Token::LessThan => Some(2),
+            Token::Equality | Token::NonEquality | Token::GreaterThan | Token::LessThan => Some(2),
             Token::Plus | Token::Minus => Some(3),
             Token::Star | Token::FSlash => Some(4),
             _ => None,
