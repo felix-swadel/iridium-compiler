@@ -9,8 +9,9 @@ const IR_EXTENSION: &str = "ir";
 fn main() {
     // read command line arguments
     let args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        println!("incorrect usage - correct usage: iridium-compiler <source.ir>");
+    if args.len() < 2 || 3 < args.len() {
+        println!(
+            "incorrect usage - correct usage: iridium-compiler <source.ir> <executable-name>");
         return;
     }
 
@@ -72,8 +73,12 @@ fn main() {
     }
 
     // write assembly to out.s
-    println!("Writing assembly to out.s...");
-    if let Err(e) = std::fs::write("out.s", generator.output()) {
-        println!("Failed to write assembly to file: {}", e);
+    let asm_filepath = match args.get(2) {
+        Some(path) => format!("{}.s", path),
+        None => "out.s".to_owned(),
+    };
+    println!("Writing assembly to {}...", asm_filepath);
+    if let Err(e) = std::fs::write(&asm_filepath, generator.output()) {
+        println!("Failed to write assembly to {}: {}", asm_filepath, e);
     }
 }
