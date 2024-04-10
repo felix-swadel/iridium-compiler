@@ -267,6 +267,16 @@ impl Generator {
             None => self.find_var(name),
         }
     }
+
+    fn expr_is_atomic(&self, expr: &NodeExpr) -> bool {
+        match expr {
+            NodeExpr::Term(term) => match term {
+                NodeTerm::Bool(_) | NodeTerm::IntLit(_) | NodeTerm::Ident(_) => true,
+                NodeTerm::Paren(expr) => self.expr_is_atomic(expr),
+            }
+            NodeExpr::BinOp(_) => false,
+        }
+    }
 }
 
 // loop management
@@ -360,36 +370,72 @@ impl Generator {
         }
     }
 
-    fn gen_bin_op(&mut self, bin_op: &NodeBinOp, reg_ix: Option<usize>) -> TypeResult {
-        // generate operands
-        // push lhs onto stack so it isn't overwritten by rhs generation
-        let lhs_type = self.gen_expr(bin_op.lhs.as_ref(), None)?;
-        // write rhs to r15
-        let rhs_type = self.gen_expr(bin_op.rhs.as_ref(), Some(15))?;
+    fn gen_bin_op_exprs(&mut self, bin_op: &NodeBinOp, lhs_ix: usize, rhs_ix: usize) -> TypeResult {
+        let lhs = bin_op.lhs.as_ref();
+        let rhs = bin_op.rhs.as_ref();
+        let (lhs_type, rhs_type) = if self.expr_is_atomic(lhs) {
+            if self.expr_is_atomic(rhs) {
+                // both types are atomic
+                (
+                    self.gen_expr(lhs, Some(lhs_ix))?,
+                    self.gen_expr(rhs, Some(rhs_ix))?,
+                )
+            } else {
+                // rhs is not atomic - generate it first
+                (
+                    self.gen_expr(rhs, Some(rhs_ix))?,
+                    self.gen_expr(lhs, Some(lhs_ix))?,
+                )
+            }
+        } else {
+            if self.expr_is_atomic(rhs) {
+                // lhs is not atomic - generate it first
+                (
+                    self.gen_expr(lhs, Some(lhs_ix))?,
+                    self.gen_expr(rhs, Some(rhs_ix))?,
+                )
+            } else {
+                // neither side is atomic
+                // push lhs to stack
+                let lhs_type = self.gen_expr(lhs, None)?;
+                // generate rhs into register
+                let rhs_type = self.gen_expr(rhs, Some(rhs_ix))?;
+                // pop lhs into register
+                let lhs_bytes = lhs_type.bytes();
+                self.pop(Register::infer(lhs_bytes, lhs_ix), lhs_bytes);
+                (lhs_type, rhs_type)
+            }
+        };
         // check that binop is valid
         if lhs_type != rhs_type {
-            return Err(format!("invalid operands in binary operation: {}", bin_op));
+            Err(format!("invalid operands in binary operation: {}", bin_op))
+        } else {
+            Ok(lhs_type)
         }
+    }
 
-        // generate binary operator expression
-        let in_bytes = lhs_type.bytes();
+    fn gen_bin_op(&mut self, bin_op: &NodeBinOp, reg_ix: Option<usize>) -> TypeResult {
+        // generate operands into r14, r15
+        let lhs_ix = 14;
+        let rhs_ix = 15;
+        let in_type = self.gen_bin_op_exprs(bin_op, lhs_ix, rhs_ix)?;
         let out_type = match bin_op.op {
-            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => lhs_type,
+            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => in_type,
             BinOp::Eq | BinOp::Ne | BinOp::Gt | BinOp::Lt | BinOp::Or | BinOp::And => Type::Bool,
         };
+        // generate binary operator expression
+        let in_bytes = in_type.bytes();
         let out_bytes = out_type.bytes();
-        // pop lhs off stack into r14
-        self.pop(Register::infer(in_bytes, 14), in_bytes);
-        let lhs = Register::infer(in_bytes, 14);
-        let rhs = Register::infer(in_bytes, 15);
+        let lhs_reg = Register::infer(in_bytes, lhs_ix);
+        let rhs_reg = Register::infer(in_bytes, rhs_ix);
         match reg_ix {
             Some(ix) => {
                 let dst = Register::infer(out_bytes, ix);
-                self.fmt_bin_op(dst, lhs, bin_op.op, rhs);
+                self.fmt_bin_op(dst, lhs_reg, bin_op.op, rhs_reg);
             }
             None => {
                 let dst = Register::infer_default(out_bytes);
-                self.fmt_bin_op(dst, lhs, bin_op.op, rhs);
+                self.fmt_bin_op(dst, lhs_reg, bin_op.op, rhs_reg);
                 self.push(dst, out_bytes);
             }
         }
