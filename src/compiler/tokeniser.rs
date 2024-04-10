@@ -7,6 +7,7 @@ const KEYWORDS: Map<&'static str, Token> = phf_map! {
     "exit" => Token::Exit,
     "let" => Token::Let,
     "if" => Token::If,
+    "else" => Token::Else,
     "true" => Token::Bool(true),
     "false" => Token::Bool(false),
 };

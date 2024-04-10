@@ -187,7 +187,14 @@ impl<'a> Parser<'a> {
             ));
         }
         let scope = self.parse_scope()?;
-        Ok(NodeCondition { expr, scope })
+        if let Some(Token::Else) = self.peek() {
+            // iterate over `else`
+            self.advance();
+            let else_scope = self.parse_scope()?;
+            Ok(NodeCondition { expr, scope, else_scope: Some(else_scope) })
+        } else {
+            Ok(NodeCondition { expr, scope, else_scope: None })
+        }
     }
 
     fn parse_stmt(&mut self) -> Result<NodeStmt, String> {

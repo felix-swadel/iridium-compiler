@@ -18,7 +18,7 @@ pub struct Generator {
     // bytes allocated on the stack
     stack_capacity: usize,
     // label management
-    label_counter: usize,
+    condition_counter: usize,
 }
 
 // public interface
@@ -31,7 +31,7 @@ impl Generator {
             scopes: Vec::new(),
             stack_length: 0,
             stack_capacity: 0,
-            label_counter: 0,
+            condition_counter: 0,
         }
     }
 
@@ -431,37 +431,85 @@ impl Generator {
         Ok(())
     }
 
-    fn gen_condition(&mut self, node_condition: &NodeCondition) -> GenResult {
+    fn gen_if_stmt(&mut self, node_condition: &NodeCondition) -> GenResult {
         let node_expr = &node_condition.expr;
         let expr_type = self.gen_expr(node_expr, Some(15))?;
         match expr_type {
             Type::Bool => (),
-            _ => return Err(format!(
-                "expected bool in conditional expression - got: {}",
-                node_expr,
-            )),
+            _ => {
+                return Err(format!(
+                    "expected bool in conditional expression - got: {}",
+                    node_expr,
+                ))
+            }
         }
-        let condition_label = self.gen_label();
-        let remainder_label = self.gen_label();
-        self.output.push_str(&format!(
-            "    tbz w15, #0, {}\n", remainder_label,
-        ));
-        self.output.push_str(&format!(
-            "    b {}\n", condition_label,
-        ));
-        self.output.push_str(&format!(
-            "{}:\n", condition_label,
-        ));
+        let if_label = format!(".condition{}_if", self.condition_counter);
+        let remainder_label = format!(".condition{}_continue", self.condition_counter);
+        self.condition_counter += 1;
+        // if first bit of w15 is 0, branch to remainder
+        self.output
+            .push_str(&format!("    tbz w15, #0, {}\n", remainder_label,));
+        // else branch to if
+        self.output.push_str(&format!("    b {}\n", if_label,));
+        // generate if scope
+        self.output.push_str(&format!("{}:\n", if_label,));
         let node_scope = &node_condition.scope;
         self.gen_scope(node_scope)?;
-        self.output.push_str(&format!(
-            "    b {}\n", remainder_label,
-        ));
-        self.output.push_str(&format!(
-            "{}:\n", remainder_label,
-        ));
-        
+        // branch to remainder
+        self.output
+            .push_str(&format!("    b {}\n", remainder_label,));
+        // generate remainder
+        self.output.push_str(&format!("{}:\n", remainder_label,));
+
         Ok(())
+    }
+
+    fn gen_if_else_stmt(&mut self, node_condition: &NodeCondition) -> GenResult {
+        let node_expr = &node_condition.expr;
+        let expr_type = self.gen_expr(node_expr, Some(15))?;
+        match expr_type {
+            Type::Bool => (),
+            _ => {
+                return Err(format!(
+                    "expected bool in conditional expression - got: {}",
+                    node_expr,
+                ))
+            }
+        }
+        let if_label = format!(".condition{}_if", self.condition_counter);
+        let else_label = format!(".condition{}_else", self.condition_counter);
+        let remainder_label = format!(".condition{}_continue", self.condition_counter);
+        self.condition_counter += 1;
+        // if first bit of w15 is 0, branch to else
+        self.output
+            .push_str(&format!("    tbz w15, #0, {}\n", else_label,));
+        // else branch to if
+        self.output.push_str(&format!("    b {}\n", if_label,));
+        // generate if scope
+        self.output.push_str(&format!("{}:\n", if_label,));
+        let node_scope = &node_condition.scope;
+        self.gen_scope(node_scope)?;
+        // branch to remainder
+        self.output
+            .push_str(&format!("    b {}\n", remainder_label,));
+        // generate else scope
+        self.output.push_str(&format!("{}:\n", else_label,));
+        let node_else_scope = &node_condition.else_scope.as_ref().unwrap();
+        self.gen_scope(node_else_scope)?;
+        // branch to remainder
+        self.output
+            .push_str(&format!("    b {}\n", remainder_label,));
+        // generate remainder
+        self.output.push_str(&format!("{}:\n", remainder_label,));
+
+        Ok(())
+    }
+
+    fn gen_condition(&mut self, node_condition: &NodeCondition) -> GenResult {
+        match node_condition.else_scope {
+            Some(_) => self.gen_if_else_stmt(node_condition),
+            None => self.gen_if_stmt(node_condition),
+        }
     }
 
     fn gen_stmt(&mut self, stmt: &NodeStmt) -> GenResult {

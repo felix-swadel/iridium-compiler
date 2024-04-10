@@ -6,6 +6,7 @@ pub enum Token {
     Exit,
     Let,
     If,
+    Else,
     // values
     Ident(String),
     Int32(u32),
@@ -37,6 +38,7 @@ impl Token {
             Token::Exit => TokenId::Exit,
             Token::Let => TokenId::Let,
             Token::If => TokenId::If,
+            Token::Else => TokenId::Else,
             Token::Ident(_) => TokenId::Ident,
             Token::Int32(_) => TokenId::Int32,
             Token::Bool(_) => TokenId::Bool,
@@ -89,6 +91,7 @@ pub enum TokenId {
     Exit,
     Let,
     If,
+    Else,
     // values
     Ident,
     Int32,
@@ -123,6 +126,7 @@ impl fmt::Display for TokenId {
                 TokenId::Exit => "`exit`",
                 TokenId::Let => "`let`",
                 TokenId::If => "`if`",
+                TokenId::Else => "`else`",
                 TokenId::Ident => "<identifier>",
                 TokenId::Int32 => "<integer-literal>",
                 TokenId::Bool => "<bool>",

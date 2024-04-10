@@ -226,6 +226,7 @@ pub struct NodeScope {
 pub struct NodeCondition {
     pub expr: NodeExpr,
     pub scope: NodeScope,
+    pub else_scope: Option<NodeScope>,
 }
 
 // Program Structure Nodes
