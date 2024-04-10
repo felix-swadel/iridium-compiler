@@ -229,6 +229,11 @@ pub struct NodeCondition {
     pub else_scope: Option<NodeScope>,
 }
 
+#[derive(Debug)]
+pub struct NodeLoop {
+    pub scope: NodeScope,
+}
+
 // Program Structure Nodes
 #[derive(Debug)]
 pub enum NodeStmt {
@@ -237,6 +242,9 @@ pub enum NodeStmt {
     Assign(NodeAssign),
     Scope(NodeScope),
     Condition(NodeCondition),
+    Loop(NodeLoop),
+    Continue,
+    Break,
 }
 
 #[derive(Debug, Default)]

@@ -197,6 +197,29 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_loop(&mut self) -> Result<NodeLoop, String> {
+        // extract `loop`
+        self.try_consume(TokenId::Loop)?;
+        let scope = self.parse_scope()?;
+        Ok(NodeLoop { scope })
+    }
+
+    fn parse_continue(&mut self) -> Result<NodeStmt, String> {
+        // consume `continue`
+        self.try_consume(TokenId::Continue)?;
+        // consume `'`
+        self.try_consume(TokenId::Semi)?;
+        Ok(NodeStmt::Continue)
+    }
+
+    fn parse_break(&mut self) -> Result<NodeStmt, String> {
+        // consume `break`
+        self.try_consume(TokenId::Break)?;
+        // consume `'`
+        self.try_consume(TokenId::Semi)?;
+        Ok(NodeStmt::Break)
+    }
+
     fn parse_stmt(&mut self) -> Result<NodeStmt, String> {
         // extract next token
         let token = match self.peek() {
@@ -210,6 +233,9 @@ impl<'a> Parser<'a> {
             TokenId::Let => Ok(NodeStmt::Let(self.parse_let()?)),
             TokenId::OpenCurly => Ok(NodeStmt::Scope(self.parse_scope()?)),
             TokenId::If => Ok(NodeStmt::Condition(self.parse_condition()?)),
+            TokenId::Loop => Ok(NodeStmt::Loop(self.parse_loop()?)),
+            TokenId::Continue => Ok(self.parse_continue()?),
+            TokenId::Break => Ok(self.parse_break()?),
             // statements with syntactic structure
             TokenId::Ident => Ok(NodeStmt::Assign(self.parse_assign()?)),
             _ => Err(format!("expected statement, found: {:?}", token)),

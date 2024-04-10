@@ -19,6 +19,8 @@ pub struct Generator {
     stack_capacity: usize,
     // label management
     condition_counter: usize,
+    loop_counter: usize,
+    loop_stack: Vec<usize>,
 }
 
 // public interface
@@ -32,6 +34,8 @@ impl Generator {
             stack_length: 0,
             stack_capacity: 0,
             condition_counter: 0,
+            loop_counter: 0,
+            loop_stack: Vec::new(),
         }
     }
 
@@ -488,6 +492,46 @@ impl Generator {
         }
     }
 
+    fn gen_loop(&mut self, node_loop: &NodeLoop) -> GenResult {
+        let loop_label = format!(".loop{}_body", self.loop_counter);
+        let remainder_label = format!(".loop{}_continue", self.loop_counter);
+        // push loop idx to stack for break and continue
+        self.loop_stack.push(self.loop_counter);
+        self.loop_counter += 1;
+        self.output.push_str(&format!("    b {}\n", loop_label,));
+        self.output.push_str(&format!("{}:\n", loop_label,));
+        let node_scope = &node_loop.scope;
+        self.gen_scope(node_scope)?;
+        // pop loop idx from stack now that body has been generated
+        if let None = self.loop_stack.pop() {
+            panic!("ran out of loop indices while generating loop");
+        }
+        // branch back to start of loop body
+        self.output.push_str(&format!("    b {}\n", loop_label,));
+        // begin remainder block
+        self.output.push_str(&format!("{}:\n", remainder_label,));
+
+        Ok(())
+    }
+
+    fn gen_continue(&mut self) -> GenResult {
+        let Some(loop_idx) = self.loop_stack.last() else {
+            return Err("encountered `continue` outside of loop".to_owned());
+        };
+        self.output
+            .push_str(&format!("    b .loop{}_body\n", loop_idx,));
+        Ok(())
+    }
+
+    fn gen_break(&mut self) -> GenResult {
+        let Some(loop_idx) = self.loop_stack.last() else {
+            return Err("encountered `break` outside of loop".to_owned());
+        };
+        self.output
+            .push_str(&format!("    b .loop{}_continue\n", loop_idx,));
+        Ok(())
+    }
+
     fn gen_stmt(&mut self, stmt: &NodeStmt) -> GenResult {
         match stmt {
             NodeStmt::Exit(node_exit) => self.gen_exit(node_exit),
@@ -495,6 +539,9 @@ impl Generator {
             NodeStmt::Assign(node_assign) => self.gen_assign(node_assign),
             NodeStmt::Scope(node_scope) => self.gen_scope(node_scope),
             NodeStmt::Condition(node_condition) => self.gen_condition(node_condition),
+            NodeStmt::Loop(node_loop) => self.gen_loop(node_loop),
+            NodeStmt::Continue => self.gen_continue(),
+            NodeStmt::Break => self.gen_break(),
         }
     }
 
