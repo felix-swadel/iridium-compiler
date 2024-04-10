@@ -42,9 +42,8 @@ impl Generator {
 
         if !self.top_level_exit_found {
             // exit with code 0 if no top level exit was found
-            self.output.push_str(&format!(
-                "    add sp, sp, #{}\n", self.stack_capacity,
-            ));
+            self.output
+                .push_str(&format!("    add sp, sp, #{}\n", self.stack_capacity,));
             self.gen_exit(&NodeExit {
                 expr: NodeExpr::new_int(0),
             })?;
@@ -60,52 +59,47 @@ impl Generator {
 
 // formatting utilities
 impl Generator {
-    fn fmt_bin_op(
-        &mut self, dst: Register, lhs: Register, op: BinOp, rhs: Register) {
+    fn fmt_bin_op(&mut self, dst: Register, lhs: Register, op: BinOp, rhs: Register) {
         match op {
-            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div |
-            BinOp::And | BinOp::Or => {
+            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div | BinOp::And | BinOp::Or => {
                 self.output.push_str(&format!(
                     "    {} {}, {}, {}\n",
                     op.get_instruction().unwrap(),
-                    dst, lhs, rhs,
+                    dst,
+                    lhs,
+                    rhs,
                 ));
-            },
+            }
             BinOp::Gt | BinOp::Lt | BinOp::Eq | BinOp::Ne => {
                 // signed subtraction stored in rhs
-                self.output.push_str(&format!(
-                    "    subs {}, {}, {}\n",
-                    dst, lhs, rhs,
-                ));
-                self.output.push_str(&format!(
-                    "    cset {}, {}\n",
-                    dst, op.get_flag().unwrap(),
-                ));
-            },
+                self.output
+                    .push_str(&format!("    subs {}, {}, {}\n", dst, lhs, rhs,));
+                self.output
+                    .push_str(&format!("    cset {}, {}\n", dst, op.get_flag().unwrap(),));
+            }
         }
     }
 
     fn fmt_move_int32(&mut self, reg: Register, val: u32) {
-        self.output.push_str(&format!(
-            "    mov {}, #{}\n",
-            reg, val,
-        ));
+        self.output
+            .push_str(&format!("    mov {}, #{}\n", reg, val,));
     }
 
     fn fmt_move_bool(&mut self, reg: Register, val: bool) {
         self.output.push_str(&format!(
             "    mov {}, {}\n",
-            reg, if val { "#1" } else { "wzr" },
+            reg,
+            if val { "#1" } else { "wzr" },
         ));
     }
 
-    fn fmt_store_reg(
-        &mut self, reg: Register, bytes: usize, offset: usize) {
+    fn fmt_store_reg(&mut self, reg: Register, bytes: usize, offset: usize) {
         if offset > 0 {
             self.output.push_str(&format!(
                 "    str{} {}, [sp, #{}]\n",
                 bytes_to_size_suffix(bytes),
-                reg, offset,
+                reg,
+                offset,
             ))
         } else {
             self.output.push_str(&format!(
@@ -116,13 +110,13 @@ impl Generator {
         }
     }
 
-    fn fmt_load_reg(
-        &mut self, reg: Register, bytes: usize, offset: usize) {
+    fn fmt_load_reg(&mut self, reg: Register, bytes: usize, offset: usize) {
         if offset > 0 {
             self.output.push_str(&format!(
                 "    ldr{} {}, [sp, #{}]\n",
                 bytes_to_size_suffix(bytes),
-                reg, offset,
+                reg,
+                offset,
             ))
         } else {
             self.output.push_str(&format!(
@@ -133,18 +127,15 @@ impl Generator {
         }
     }
 
-    fn fmt_load_pair(
-        &mut self, reg_1: Register, reg_2: Register, offset: usize) {
+    fn fmt_load_pair(&mut self, reg_1: Register, reg_2: Register, offset: usize) {
         if offset > 0 {
             self.output.push_str(&format!(
                 "    ldp {}, {}, [sp, #{}]\n",
                 reg_1, reg_2, offset,
             ));
         } else {
-            self.output.push_str(&format!(
-                "    ldp {}, {}, [sp]\n",
-                reg_1, reg_2,
-            ));
+            self.output
+                .push_str(&format!("    ldp {}, {}, [sp]\n", reg_1, reg_2,));
         }
     }
 }
@@ -215,8 +206,7 @@ impl Generator {
 
     fn load_ident(&mut self, reg: Register, var: &Var) {
         let offset = self.stack_capacity - var.location();
-        self.fmt_load_reg(
-            reg, var.bytes(), offset);
+        self.fmt_load_reg(reg, var.bytes(), offset);
     }
 
     fn write_ident(&mut self, reg: Register, var: &Var) {
@@ -249,15 +239,9 @@ impl Generator {
                     }
                 }
                 None
-            },
-            None => self.find_var(name)
+            }
+            None => self.find_var(name),
         }
-    }
-
-    fn gen_label(&mut self) -> String {
-        let s = format!(".COND_{}", self.label_counter);
-        self.label_counter += 1;
-        s
     }
 }
 
@@ -273,7 +257,7 @@ impl Generator {
                 let reg = Register::W(Register::default_reg());
                 self.move_int32(reg, val);
                 self.push(reg, Type::Int32.bytes());
-            },
+            }
         }
         Ok(Type::Int32)
     }
@@ -285,7 +269,7 @@ impl Generator {
                 let reg = Register::W(Register::default_reg());
                 self.move_bool(reg, val);
                 self.push(reg, Type::Bool.bytes());
-            },
+            }
         }
         Ok(Type::Bool)
     }
@@ -293,8 +277,7 @@ impl Generator {
     fn gen_ident(&mut self, name: &str, reg_ix: Option<usize>) -> TypeResult {
         let var = match self.find_var(name) {
             Some(var) => var.clone(),
-            None => return Err(format!(
-                "undeclared identifier: {}", name)),
+            None => return Err(format!("undeclared identifier: {}", name)),
         };
         match reg_ix {
             Some(ix) => self.load_ident(Register::infer(var.bytes(), ix), &var),
@@ -317,14 +300,11 @@ impl Generator {
     }
 
     fn gen_bin_op(&mut self, bin_op: &NodeBinOp, reg_ix: Option<usize>) -> TypeResult {
-        
         // generate operands
         // push lhs onto stack so it isn't overwritten by rhs generation
-        let lhs_type = self.gen_expr(
-            bin_op.lhs.as_ref(), None)?;
+        let lhs_type = self.gen_expr(bin_op.lhs.as_ref(), None)?;
         // write rhs to r15
-        let rhs_type = self.gen_expr(
-            bin_op.rhs.as_ref(), Some(15))?;
+        let rhs_type = self.gen_expr(bin_op.rhs.as_ref(), Some(15))?;
         // check that binop is valid
         if lhs_type != rhs_type {
             return Err(format!("invalid operands in binary operation: {}", bin_op));
@@ -334,8 +314,7 @@ impl Generator {
         let in_bytes = lhs_type.bytes();
         let out_type = match bin_op.op {
             BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => lhs_type,
-            BinOp::Eq | BinOp::Ne | BinOp::Gt | BinOp::Lt |
-            BinOp::Or | BinOp::And => Type::Bool,
+            BinOp::Eq | BinOp::Ne | BinOp::Gt | BinOp::Lt | BinOp::Or | BinOp::And => Type::Bool,
         };
         let out_bytes = out_type.bytes();
         // pop lhs off stack into r14
@@ -346,7 +325,7 @@ impl Generator {
             Some(ix) => {
                 let dst = Register::infer(out_bytes, ix);
                 self.fmt_bin_op(dst, lhs, bin_op.op, rhs);
-            },
+            }
             None => {
                 let dst = Register::infer_default(out_bytes);
                 self.fmt_bin_op(dst, lhs, bin_op.op, rhs);
@@ -358,12 +337,8 @@ impl Generator {
 
     fn gen_expr(&mut self, expr: &NodeExpr, reg_ix: Option<usize>) -> TypeResult {
         match expr {
-            NodeExpr::Term(term) => {
-                self.gen_term(term, reg_ix)
-            },
-            NodeExpr::BinOp(bin_op) => {
-                self.gen_bin_op(bin_op, reg_ix)
-            }
+            NodeExpr::Term(term) => self.gen_term(term, reg_ix),
+            NodeExpr::BinOp(bin_op) => self.gen_bin_op(bin_op, reg_ix),
         }
     }
 
@@ -375,8 +350,7 @@ impl Generator {
         }
         let expr = &node_let.expr;
         let type_ = self.gen_expr(expr, None)?;
-        self.vars
-            .push(Var::new(ident, self.stack_length, type_));
+        self.vars.push(Var::new(ident, self.stack_length, type_));
 
         Ok(())
     }
@@ -394,12 +368,14 @@ impl Generator {
         if expr_type != var.type_() {
             return Err(format!(
                 "tried to assign {} value to identifier {}, which is {}",
-                expr_type, ident, var.type_(),
+                expr_type,
+                ident,
+                var.type_(),
             ));
         }
         let reg = Register::infer(var.bytes(), 15);
         self.write_ident(reg, &var);
-        
+
         Ok(())
     }
 
