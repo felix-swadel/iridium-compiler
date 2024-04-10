@@ -239,6 +239,12 @@ pub struct NodeLoop {
     pub scope: NodeScope,
 }
 
+#[derive(Debug)]
+pub struct NodeWhile {
+    pub expr: NodeExpr,
+    pub scope: NodeScope,
+}
+
 // Program Structure Nodes
 #[derive(Debug)]
 pub enum NodeStmt {
@@ -248,6 +254,7 @@ pub enum NodeStmt {
     Scope(NodeScope),
     Condition(NodeCondition),
     Loop(NodeLoop),
+    While(NodeWhile),
     Continue,
     Break,
 }

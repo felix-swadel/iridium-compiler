@@ -7,6 +7,11 @@ const STACK_DELTA: usize = 16;
 pub type GenResult = Result<(), String>;
 pub type TypeResult = Result<Type, String>;
 
+enum Cycle {
+    Loop(usize),
+    While(usize),
+}
+
 pub struct Generator {
     output: String,
     top_level_exit_found: bool,
@@ -20,7 +25,8 @@ pub struct Generator {
     // label management
     condition_counter: usize,
     loop_counter: usize,
-    loop_stack: Vec<usize>,
+    while_counter: usize,
+    loop_stack: Vec<Cycle>,
 }
 
 // public interface
@@ -35,6 +41,7 @@ impl Generator {
             stack_capacity: 0,
             condition_counter: 0,
             loop_counter: 0,
+            while_counter: 0,
             loop_stack: Vec::new(),
         }
     }
@@ -249,6 +256,43 @@ impl Generator {
     }
 }
 
+// loop management
+impl Generator {
+    fn gen_if_labels(&mut self) -> (String, String) {
+        let if_label = format!(".condition{}_if", self.condition_counter);
+        let end_label = format!(".condition{}_end", self.condition_counter);
+        self.condition_counter += 1;
+        (if_label, end_label)
+    }
+
+    fn gen_if_else_labels(&mut self) -> (String, String, String) {
+        let if_label = format!(".condition{}_if", self.condition_counter);
+        let else_label = format!(".condition{}_else", self.condition_counter);
+        let end_label = format!(".condition{}_end", self.condition_counter);
+        self.condition_counter += 1;
+        (if_label, else_label, end_label)
+    }
+
+    fn gen_loop_labels(&mut self) -> (String, String) {
+        let loop_label = format!(".loop{}_body", self.loop_counter);
+        let end_label = format!(".loop{}_end", self.loop_counter);
+        // push loop idx to stack for break and continue
+        self.loop_stack.push(Cycle::Loop(self.loop_counter));
+        self.loop_counter += 1;
+        (loop_label, end_label)
+    }
+
+    fn gen_while_labels(&mut self) -> (String, String, String) {
+        let while_label = format!(".while{}_condition", self.while_counter);
+        let body_label = format!(".while{}_body", self.while_counter);
+        let end_label = format!(".while{}_end", self.while_counter);
+        // push loop idx to stack for break and continue
+        self.loop_stack.push(Cycle::While(self.while_counter));
+        self.while_counter += 1;
+        (while_label, body_label, end_label)
+    }
+}
+
 // generation functions
 // when a node results in a value in assembly, that value is
 // pushed to the stack unless a register is explicitly specified
@@ -412,54 +456,45 @@ impl Generator {
     }
 
     fn gen_if_stmt(&mut self, node_condition: &NodeCondition) -> GenResult {
-        let node_expr = &node_condition.expr;
-        let expr_type = self.gen_expr(node_expr, Some(15))?;
+        let expr_type = self.gen_expr(&node_condition.expr, Some(15))?;
         match expr_type {
             Type::Bool => (),
             _ => {
                 return Err(format!(
                     "expected bool in conditional expression - got: {}",
-                    node_expr,
+                    &node_condition.expr,
                 ))
             }
         }
-        let if_label = format!(".condition{}_if", self.condition_counter);
-        let remainder_label = format!(".condition{}_continue", self.condition_counter);
-        self.condition_counter += 1;
+        let (if_label, end_label) = self.gen_if_labels();
         // if first bit of w15 is 0, branch to remainder
         self.output
-            .push_str(&format!("    tbz w15, #0, {}\n", remainder_label,));
+            .push_str(&format!("    tbz w15, #0, {}\n", end_label));
         // else branch to if
-        self.output.push_str(&format!("    b {}\n", if_label,));
+        self.output.push_str(&format!("    b {}\n", if_label));
         // generate if scope
-        self.output.push_str(&format!("{}:\n", if_label,));
-        let node_scope = &node_condition.scope;
-        self.gen_scope(node_scope)?;
+        self.output.push_str(&format!("{}:\n", if_label));
+        self.gen_scope(&node_condition.scope)?;
         // branch to remainder
-        self.output
-            .push_str(&format!("    b {}\n", remainder_label,));
+        self.output.push_str(&format!("    b {}\n", end_label));
         // generate remainder
-        self.output.push_str(&format!("{}:\n", remainder_label,));
+        self.output.push_str(&format!("{}:\n", end_label));
 
         Ok(())
     }
 
     fn gen_if_else_stmt(&mut self, node_condition: &NodeCondition) -> GenResult {
-        let node_expr = &node_condition.expr;
-        let expr_type = self.gen_expr(node_expr, Some(15))?;
+        let expr_type = self.gen_expr(&node_condition.expr, Some(15))?;
         match expr_type {
             Type::Bool => (),
             _ => {
                 return Err(format!(
                     "expected bool in conditional expression - got: {}",
-                    node_expr,
+                    &node_condition.expr,
                 ))
             }
         }
-        let if_label = format!(".condition{}_if", self.condition_counter);
-        let else_label = format!(".condition{}_else", self.condition_counter);
-        let remainder_label = format!(".condition{}_continue", self.condition_counter);
-        self.condition_counter += 1;
+        let (if_label, else_label, end_label) = self.gen_if_else_labels();
         // if first bit of w15 is 0, branch to else
         self.output
             .push_str(&format!("    tbz w15, #0, {}\n", else_label,));
@@ -467,20 +502,16 @@ impl Generator {
         self.output.push_str(&format!("    b {}\n", if_label,));
         // generate if scope
         self.output.push_str(&format!("{}:\n", if_label,));
-        let node_scope = &node_condition.scope;
-        self.gen_scope(node_scope)?;
+        self.gen_scope(&node_condition.scope)?;
         // branch to remainder
-        self.output
-            .push_str(&format!("    b {}\n", remainder_label,));
+        self.output.push_str(&format!("    b {}\n", end_label,));
         // generate else scope
         self.output.push_str(&format!("{}:\n", else_label,));
-        let node_else_scope = &node_condition.else_scope.as_ref().unwrap();
-        self.gen_scope(node_else_scope)?;
+        self.gen_scope(node_condition.else_scope.as_ref().unwrap())?;
         // branch to remainder
-        self.output
-            .push_str(&format!("    b {}\n", remainder_label,));
+        self.output.push_str(&format!("    b {}\n", end_label,));
         // generate remainder
-        self.output.push_str(&format!("{}:\n", remainder_label,));
+        self.output.push_str(&format!("{}:\n", end_label,));
 
         Ok(())
     }
@@ -493,15 +524,10 @@ impl Generator {
     }
 
     fn gen_loop(&mut self, node_loop: &NodeLoop) -> GenResult {
-        let loop_label = format!(".loop{}_body", self.loop_counter);
-        let remainder_label = format!(".loop{}_continue", self.loop_counter);
-        // push loop idx to stack for break and continue
-        self.loop_stack.push(self.loop_counter);
-        self.loop_counter += 1;
+        let (loop_label, end_label) = self.gen_loop_labels();
         self.output.push_str(&format!("    b {}\n", loop_label,));
         self.output.push_str(&format!("{}:\n", loop_label,));
-        let node_scope = &node_loop.scope;
-        self.gen_scope(node_scope)?;
+        self.gen_scope(&node_loop.scope)?;
         // pop loop idx from stack now that body has been generated
         if let None = self.loop_stack.pop() {
             panic!("ran out of loop indices while generating loop");
@@ -509,26 +535,70 @@ impl Generator {
         // branch back to start of loop body
         self.output.push_str(&format!("    b {}\n", loop_label,));
         // begin remainder block
-        self.output.push_str(&format!("{}:\n", remainder_label,));
+        self.output.push_str(&format!("{}:\n", end_label,));
+
+        Ok(())
+    }
+
+    fn gen_while(&mut self, node_while: &NodeWhile) -> GenResult {
+        let (while_label, body_label, end_label) = self.gen_while_labels();
+        self.output.push_str(&format!("    b {}\n", while_label));
+        self.output.push_str(&format!("{}:\n", while_label));
+        // check condition
+        let expr_type = self.gen_expr(&node_while.expr, Some(15))?;
+        match expr_type {
+            Type::Bool => (),
+            _ => {
+                return Err(format!(
+                    "expected bool in conditional expression - got: {}",
+                    &node_while.expr,
+                ))
+            }
+        }
+        // if first bit of w15 is 0, branch to remainder
+        self.output
+            .push_str(&format!("    tbz w15, #0, {}\n", end_label));
+        // else branch to body
+        self.output.push_str(&format!("    b {}\n", body_label));
+        // generate body
+        self.output.push_str(&format!("{}:\n", body_label));
+        self.gen_scope(&node_while.scope)?;
+        // branch back to condition
+        self.output.push_str(&format!("    b {}\n", while_label));
+        // generate remainder
+        self.output.push_str(&format!("{}:\n", end_label));
 
         Ok(())
     }
 
     fn gen_continue(&mut self) -> GenResult {
-        let Some(loop_idx) = self.loop_stack.last() else {
+        let Some(cycle_ix) = self.loop_stack.last() else {
             return Err("encountered `continue` outside of loop".to_owned());
         };
-        self.output
-            .push_str(&format!("    b .loop{}_body\n", loop_idx,));
+        match cycle_ix {
+            Cycle::Loop(ix) => {
+                self.output.push_str(&format!("    b .loop{}_body\n", ix));
+            }
+            Cycle::While(ix) => {
+                self.output
+                    .push_str(&format!("    b .while{}_condition\n", ix));
+            }
+        }
         Ok(())
     }
 
     fn gen_break(&mut self) -> GenResult {
-        let Some(loop_idx) = self.loop_stack.last() else {
+        let Some(cycle_ix) = self.loop_stack.last() else {
             return Err("encountered `break` outside of loop".to_owned());
         };
-        self.output
-            .push_str(&format!("    b .loop{}_continue\n", loop_idx,));
+        match cycle_ix {
+            Cycle::Loop(ix) => {
+                self.output.push_str(&format!("    b .loop{}_end\n", ix));
+            }
+            Cycle::While(ix) => {
+                self.output.push_str(&format!("    b .while{}_end\n", ix));
+            }
+        }
         Ok(())
     }
 
@@ -540,6 +610,7 @@ impl Generator {
             NodeStmt::Scope(node_scope) => self.gen_scope(node_scope),
             NodeStmt::Condition(node_condition) => self.gen_condition(node_condition),
             NodeStmt::Loop(node_loop) => self.gen_loop(node_loop),
+            NodeStmt::While(node_while) => self.gen_while(node_while),
             NodeStmt::Continue => self.gen_continue(),
             NodeStmt::Break => self.gen_break(),
         }

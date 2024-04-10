@@ -8,6 +8,7 @@ pub enum Token {
     If,
     Else,
     Loop,
+    While,
     Continue,
     Break,
     // values
@@ -45,6 +46,7 @@ impl Token {
             Token::Loop => TokenId::Loop,
             Token::Continue => TokenId::Continue,
             Token::Break => TokenId::Break,
+            Token::While => TokenId::While,
             Token::Ident(_) => TokenId::Ident,
             Token::Int32(_) => TokenId::Int32,
             Token::Bool(_) => TokenId::Bool,
@@ -100,6 +102,7 @@ pub enum TokenId {
     Loop,
     Continue,
     Break,
+    While,
     // values
     Ident,
     Int32,
@@ -136,6 +139,7 @@ impl fmt::Display for TokenId {
                 TokenId::If => "`if`",
                 TokenId::Else => "`else`",
                 TokenId::Loop => "`loop`",
+                TokenId::While => "`while`",
                 TokenId::Continue => "`continue`",
                 TokenId::Break => "`break`",
                 TokenId::Ident => "<identifier>",

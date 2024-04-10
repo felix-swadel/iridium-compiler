@@ -210,6 +210,14 @@ impl<'a> Parser<'a> {
         Ok(NodeLoop { scope })
     }
 
+    fn parse_while(&mut self) -> Result<NodeWhile, String> {
+        // extract `while`
+        self.try_consume(TokenId::While)?;
+        let expr = self.parse_expr(0)?;
+        let scope = self.parse_scope()?;
+        Ok(NodeWhile { expr, scope })
+    }
+
     fn parse_continue(&mut self) -> Result<NodeStmt, String> {
         // consume `continue`
         self.try_consume(TokenId::Continue)?;
@@ -240,6 +248,7 @@ impl<'a> Parser<'a> {
             TokenId::OpenCurly => Ok(NodeStmt::Scope(self.parse_scope()?)),
             TokenId::If => Ok(NodeStmt::Condition(self.parse_condition()?)),
             TokenId::Loop => Ok(NodeStmt::Loop(self.parse_loop()?)),
+            TokenId::While => Ok(NodeStmt::While(self.parse_while()?)),
             TokenId::Continue => Ok(self.parse_continue()?),
             TokenId::Break => Ok(self.parse_break()?),
             // statements with syntactic structure
