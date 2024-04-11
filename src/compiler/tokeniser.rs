@@ -114,10 +114,28 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
     while let Some(c) = iter.next() {
         // check for control characters
         if c.is_whitespace() {
-            if !(buf.is_empty()) {
+            if !buf.is_empty() {
                 tokens.push(buf.extract_token());
             }
             continue;
+        }
+        // check for comment
+        if c == '/' {
+            // defined by two slashes
+            if let Some(&'/') = iter.peek() {
+                iter.next().unwrap(); 
+                // we've found a comment
+                if !buf.is_empty() {
+                    tokens.push(buf.extract_token());
+                }
+                // iterate until next newline
+                while let Some(c) = iter.next() {
+                    if c == '\n' {
+                        break;
+                    }
+                }
+                continue;
+            }
         }
         let token = match c {
             // maths symbols
@@ -134,6 +152,7 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
             ')' => Some(Token::CloseParen),
             '{' => Some(Token::OpenCurly),
             '}' => Some(Token::CloseCurly),
+            // operators with multiple characters
             '=' => {
                 if let Some(next_c) = iter.peek() {
                     if *next_c == '=' {

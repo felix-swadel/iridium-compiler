@@ -20,9 +20,6 @@ Currently positive `int-32` and `bool` are supported. Types are always inferred.
 
 All operators are binary. `+`, `-`, `*`, `/`, `<`, `>`, `==`, `!=`, `&&`, `||` are supported.
 
-TODO: add binary assignment operators: `+=`, etc.
-TODO: add unary operators `+`, `-`, `++`, `--`.
-
 ### Variables
 
 Variables are declared with `let`. Currently all variables are mutable.
@@ -41,16 +38,19 @@ Currently the only built-in is `exit(int)` which exits the program with a value.
 Simple control flow is supported:
 
 ```
+// simple if
 if x > 2 {
     x = x + 1;
 }
 
+// if-else
 if y > 0 {
     y = 10;
 } else {
     y = 0;
 }
 
+// infinite loop ~ while(true)
 loop {
     y = y + 1;
     if y > 20 {
@@ -58,6 +58,7 @@ loop {
     }
 }
 
+// while loop
 while y < 100 {
     y = y + 12;
 }
@@ -65,7 +66,6 @@ while y < 100 {
 
 ## TODO:
 
-- Add comments.
 - Add unary operators.
 - Add assignment operators (e.g. `+=`).
 - Add `print` built-in.
