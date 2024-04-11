@@ -500,11 +500,24 @@ impl Generator {
     }
 
     fn gen_scope(&mut self, node_scope: &NodeScope) -> GenResult {
+        // store stack pointer at start of scope
         self.scopes.push(self.stack_length);
         for stmt in node_scope.stmts.iter() {
             self.gen_stmt(stmt)?;
         }
+        // restore stack pointer from before scope
         self.stack_length = self.scopes.pop().unwrap();
+        // remove any vars local to the scope
+        for (ix, var) in self.vars.iter().rev().enumerate() {
+            if var.location() > self.stack_length {
+                continue;
+            }
+            // take complement of reverse iterator
+            let cur_ix = self.vars.len() - ix;
+            // remove all vars after cur_ix
+            self.vars.truncate(cur_ix);
+            break;
+        }
         let stack_space = self.stack_capacity - self.stack_length;
         let num_deltas = stack_space / STACK_DELTA;
         if num_deltas > 0 {
