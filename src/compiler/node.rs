@@ -6,7 +6,7 @@ use super::token::Token;
 // Expression Structure Nodes
 #[derive(Debug, Clone)]
 pub enum NodeTerm {
-    IntLit(u32),
+    Int32(u32),
     Ident(String),
     Bool(bool),
     Paren(Box<NodeExpr>),
@@ -15,12 +15,12 @@ pub enum NodeTerm {
 impl NodeTerm {
     pub fn operate(&self, op: &BinOp, other: &NodeTerm) -> Result<Option<NodeTerm>, String> {
         match self {
-            NodeTerm::IntLit(num_1) => match other {
-                NodeTerm::IntLit(num_2) => match op {
-                    BinOp::Add => Ok(Some(NodeTerm::IntLit(num_1 + num_2))),
-                    BinOp::Sub => Ok(Some(NodeTerm::IntLit(num_1 - num_2))),
-                    BinOp::Mul => Ok(Some(NodeTerm::IntLit(num_1 * num_2))),
-                    BinOp::Div => Ok(Some(NodeTerm::IntLit(num_1 / num_2))),
+            NodeTerm::Int32(num_1) => match other {
+                NodeTerm::Int32(num_2) => match op {
+                    BinOp::Add => Ok(Some(NodeTerm::Int32(num_1 + num_2))),
+                    BinOp::Sub => Ok(Some(NodeTerm::Int32(num_1 - num_2))),
+                    BinOp::Mul => Ok(Some(NodeTerm::Int32(num_1 * num_2))),
+                    BinOp::Div => Ok(Some(NodeTerm::Int32(num_1 / num_2))),
                     BinOp::Eq => Ok(Some(NodeTerm::Bool(num_1 == num_2))),
                     BinOp::Ne => Ok(Some(NodeTerm::Bool(num_1 != num_2))),
                     BinOp::Gt => Ok(Some(NodeTerm::Bool(num_1 > num_2))),
@@ -47,7 +47,7 @@ impl NodeTerm {
                         bl_1, op, bl_2,
                     )),
                 },
-                NodeTerm::IntLit(num) => {
+                NodeTerm::Int32(num) => {
                     Err(format!("invalid binary operation: {} {} {}", bl_1, op, num,))
                 }
                 NodeTerm::Ident(_) => Ok(None),
@@ -62,7 +62,7 @@ impl NodeTerm {
 impl std::fmt::Display for NodeTerm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NodeTerm::IntLit(val) => write!(f, "{}", val),
+            NodeTerm::Int32(val) => write!(f, "{}", val),
             NodeTerm::Bool(val) => write!(f, "{}", val),
             NodeTerm::Ident(val) => write!(f, "{}", val),
             NodeTerm::Paren(expr) => write!(f, "({})", expr.as_ref()),
@@ -192,7 +192,7 @@ impl NodeExpr {
     }
 
     pub fn new_int(num: u32) -> NodeExpr {
-        NodeExpr::Term(NodeTerm::IntLit(num))
+        NodeExpr::Term(NodeTerm::Int32(num))
     }
 }
 

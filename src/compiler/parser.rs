@@ -62,7 +62,7 @@ impl<'a> Parser<'a> {
         match token {
             Token::Int32(int_lit) => {
                 self.advance();
-                Ok(NodeTerm::IntLit(int_lit))
+                Ok(NodeTerm::Int32(int_lit))
             }
             Token::Bool(bl_lit) => {
                 self.advance();
@@ -208,7 +208,7 @@ impl<'a> Parser<'a> {
         self.try_consume(TokenId::If)?;
         let expr = self.parse_expr(0)?;
         // check that term can be bool
-        if let NodeExpr::Term(NodeTerm::IntLit(_)) = expr {
+        if let NodeExpr::Term(NodeTerm::Int32(_)) = expr {
             return Err(format!("invalid conditional expression: {}", expr,));
         }
         let scope = self.parse_scope()?;

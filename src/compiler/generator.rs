@@ -271,7 +271,7 @@ impl Generator {
     fn expr_is_atomic(&self, expr: &NodeExpr) -> bool {
         match expr {
             NodeExpr::Term(term) => match term {
-                NodeTerm::Bool(_) | NodeTerm::IntLit(_) | NodeTerm::Ident(_) => true,
+                NodeTerm::Bool(_) | NodeTerm::Int32(_) | NodeTerm::Ident(_) => true,
                 NodeTerm::Paren(expr) => self.expr_is_atomic(expr),
             },
             NodeExpr::BinOp(_) => false,
@@ -363,7 +363,7 @@ impl Generator {
 
     fn gen_term(&mut self, term: &NodeTerm, reg_ix: Option<usize>) -> TypeResult {
         match term {
-            NodeTerm::IntLit(val) => self.gen_int32(*val, reg_ix),
+            NodeTerm::Int32(val) => self.gen_int32(*val, reg_ix),
             NodeTerm::Bool(val) => self.gen_bool(*val, reg_ix),
             NodeTerm::Ident(name) => self.gen_ident(name, reg_ix),
             NodeTerm::Paren(expr) => self.gen_expr(expr.as_ref(), reg_ix),
