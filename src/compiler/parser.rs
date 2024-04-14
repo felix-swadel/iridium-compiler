@@ -1,3 +1,4 @@
+use super::cpu::Type;
 use super::node::*;
 use super::token::*;
 
@@ -34,6 +35,19 @@ impl<'a> Parser<'a> {
 
     fn try_consume(&mut self, expected: TokenId) -> Result<Token, String> {
         let token = self.expect(expected)?;
+        self.advance();
+        Ok(token)
+    }
+
+    fn try_consume_type_name(&mut self) -> Result<Type, String> {
+        let token = match self.peek() {
+            Some(token) => match token {
+                Token::Int32Name => Type::Int32,
+                Token::BoolName => Type::Bool,
+                _ => return Err(format!("expected type name, found {}", token)),
+            },
+            None => return Err("expected type name, found EOF".to_owned()),
+        };
         self.advance();
         Ok(token)
     }
@@ -128,6 +142,18 @@ impl<'a> Parser<'a> {
         let Token::Ident(ident) = self.try_consume(TokenId::Ident)? else {
             unreachable!()
         };
+        // check for explicit type
+        let Some(next) = self.peek() else {
+            return Err("expected `=` or `:`, found EOF".to_owned());
+        };
+        let exp_type = match next {
+            Token::Equals => None,
+            Token::Colon => {
+                self.advance();
+                Some(self.try_consume_type_name()?)
+            }
+            _ => return Err(format!("expected `=` or `:`, found {}", next)),
+        };
         // extract =
         self.try_consume(TokenId::Equals)?;
         // extract expression
@@ -136,6 +162,7 @@ impl<'a> Parser<'a> {
         self.try_consume(TokenId::Semi)?;
         Ok(NodeLet {
             ident: ident.clone(),
+            exp_type,
             expr,
         })
     }

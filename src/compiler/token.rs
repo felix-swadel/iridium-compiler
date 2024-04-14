@@ -15,6 +15,9 @@ pub enum Token {
     Ident(String),
     Int32(u32),
     Bool(bool),
+    // type names
+    Int32Name,
+    BoolName,
     // maths symbols
     Plus,
     Minus,
@@ -29,6 +32,7 @@ pub enum Token {
     Or,
     // control characters
     Semi,
+    Colon,
     OpenParen,
     CloseParen,
     OpenCurly,
@@ -50,6 +54,8 @@ impl Token {
             Token::Ident(_) => TokenId::Ident,
             Token::Int32(_) => TokenId::Int32,
             Token::Bool(_) => TokenId::Bool,
+            Token::Int32Name => TokenId::Int32Name,
+            Token::BoolName => TokenId::BoolName,
             Token::Plus => TokenId::Plus,
             Token::Minus => TokenId::Minus,
             Token::Star => TokenId::Star,
@@ -61,6 +67,7 @@ impl Token {
             Token::And => TokenId::And,
             Token::Or => TokenId::Or,
             Token::Semi => TokenId::Semi,
+            Token::Colon => TokenId::Colon,
             Token::OpenParen => TokenId::OpenParen,
             Token::CloseParen => TokenId::CloseParen,
             Token::OpenCurly => TokenId::OpenCurly,
@@ -107,6 +114,9 @@ pub enum TokenId {
     Ident,
     Int32,
     Bool,
+    // type names
+    Int32Name,
+    BoolName,
     // maths symbols
     Plus,
     Minus,
@@ -121,6 +131,7 @@ pub enum TokenId {
     Or,
     // control characters
     Semi,
+    Colon,
     OpenParen,
     CloseParen,
     OpenCurly,
@@ -145,6 +156,8 @@ impl fmt::Display for TokenId {
                 TokenId::Ident => "<identifier>",
                 TokenId::Int32 => "<integer-literal>",
                 TokenId::Bool => "<bool>",
+                TokenId::Int32Name => "`i32`",
+                TokenId::BoolName => "`bool`",
                 TokenId::Plus => "`+`",
                 TokenId::Minus => "`-`",
                 TokenId::Star => "`*`",
@@ -156,6 +169,7 @@ impl fmt::Display for TokenId {
                 TokenId::And => "`&&`",
                 TokenId::Or => "`||`",
                 TokenId::Semi => "`;`",
+                TokenId::Colon => "`:`",
                 TokenId::OpenParen => "`(`",
                 TokenId::CloseParen => "`)`",
                 TokenId::OpenCurly => "`{`",

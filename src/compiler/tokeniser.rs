@@ -14,6 +14,8 @@ const KEYWORDS: Map<&'static str, Token> = phf_map! {
     "break" => Token::Break,
     "true" => Token::Bool(true),
     "false" => Token::Bool(false),
+    "i32" => Token::Int32Name,
+    "bool" => Token::BoolName,
 };
 
 #[derive(Debug, PartialEq)]
@@ -112,7 +114,7 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
     let mut buf = TokenBuf::new();
     // iterate through characters of text
     while let Some(c) = iter.next() {
-        // check for control characters
+        // check for whitespace
         if c.is_whitespace() {
             if !buf.is_empty() {
                 tokens.push(buf.extract_token());
@@ -148,6 +150,7 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
             '<' => Some(Token::LessThan),
             // control characters
             ';' => Some(Token::Semi),
+            ':' => Some(Token::Colon),
             '(' => Some(Token::OpenParen),
             ')' => Some(Token::CloseParen),
             '{' => Some(Token::OpenCurly),

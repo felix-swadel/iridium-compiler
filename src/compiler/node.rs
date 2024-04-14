@@ -1,5 +1,6 @@
 use std::boxed::Box;
 
+use super::cpu::Type;
 use super::token::Token;
 
 // Expression Structure Nodes
@@ -213,6 +214,7 @@ pub struct NodeExit {
 #[derive(Debug)]
 pub struct NodeLet {
     pub ident: String,
+    pub exp_type: Option<Type>,
     pub expr: NodeExpr,
 }
 

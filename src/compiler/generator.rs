@@ -273,7 +273,7 @@ impl Generator {
             NodeExpr::Term(term) => match term {
                 NodeTerm::Bool(_) | NodeTerm::IntLit(_) | NodeTerm::Ident(_) => true,
                 NodeTerm::Paren(expr) => self.expr_is_atomic(expr),
-            }
+            },
             NodeExpr::BinOp(_) => false,
         }
     }
@@ -457,6 +457,14 @@ impl Generator {
         }
         let expr = &node_let.expr;
         let type_ = self.gen_expr(expr, None)?;
+        if let Some(exp_type) = &node_let.exp_type {
+            if type_ != *exp_type {
+                return Err(format!(
+                    "cannot assign {} value to {} identifier",
+                    type_, exp_type
+                ));
+            }
+        }
         self.vars.push(Var::new(ident, self.stack_length, type_));
 
         Ok(())
