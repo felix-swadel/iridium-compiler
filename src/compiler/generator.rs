@@ -419,7 +419,14 @@ impl Generator {
         };
         // check that binop is valid
         if lhs_type != rhs_type {
-            Err(format!("invalid operands in binary operation: {}", bin_op))
+            Err(format!(
+                "invalid operands in binary operation: [{}: {}] {} [{}: {}]",
+                bin_op.lhs.as_ref(),
+                lhs_type,
+                bin_op.op,
+                bin_op.rhs.as_ref(),
+                rhs_type
+            ))
         } else {
             Ok(lhs_type)
         }

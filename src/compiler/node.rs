@@ -172,7 +172,7 @@ pub struct NodeBinOp {
 
 impl std::fmt::Display for NodeBinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}] {} [{}]", self.lhs, self.op, self.rhs)
+        write!(f, "{} {} {}", self.lhs, self.op, self.rhs)
     }
 }
 
