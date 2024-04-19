@@ -1,4 +1,4 @@
-cargo run -- out.ir
+cargo run -- <your-script-here>.ir out
 as -o out.o out.s
 ld -o out out.o \
 	-lSystem \
