@@ -70,7 +70,6 @@ impl Generator {
 
 // formatting utilities
 impl Generator {
-    fn fmt_bin_op(&mut self, dst: Register, lhs: Register, op: BinOp, rhs: Register) {
     fn fmt_bin_op(&mut self, dst: Register, lhs: Register, op: BinOp, rhs: Register, signed: bool) {
         match op {
             BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div | BinOp::And | BinOp::Or => {
