@@ -177,7 +177,8 @@ impl Generator {
 
     fn shrink_stack(&mut self, bytes: usize) {
         assert_eq!(bytes % STACK_DELTA, 0);
-        self.output.push_str(&format!("    add sp, sp, #{}\n", bytes));
+        self.output
+            .push_str(&format!("    add sp, sp, #{}\n", bytes));
         self.stack_capacity -= bytes;
     }
 
