@@ -125,7 +125,7 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
         if c == '/' {
             // defined by two slashes
             if let Some(&'/') = iter.peek() {
-                iter.next().unwrap(); 
+                iter.next().unwrap();
                 // we've found a comment
                 if !buf.is_empty() {
                     tokens.push(buf.extract_token());
