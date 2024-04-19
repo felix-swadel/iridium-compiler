@@ -353,18 +353,31 @@ impl Generator {
         Ok(var.type_())
     }
 
-    fn gen_unary_op(&mut self, term: &NodeTerm, reg_ix: Option<usize>) -> TypeResult {
+    fn gen_unary_op(&mut self, unary_op: &NodeUnaryOp, reg_ix: Option<usize>) -> TypeResult {
         // ensure that this value isn't written to the stack
         let reg = reg_ix.unwrap_or(Register::default_reg());
-        let type_ = self.gen_term(term, Some(reg))?;
-        if !type_.is_signed() {
-            return Err(format!("cannot negate unsigned expression: {}", term));
-        }
+        let type_ = self.gen_term(unary_op.term.as_ref(), Some(reg))?;
         let bytes = type_.bytes();
-        let zero = Register::infer_zr(bytes);
         let reg = Register::infer(bytes, reg);
-        // perform negation as 0 - term
-        self.fmt_bin_op(reg, zero, BinOp::Sub, reg, true);
+        match unary_op.op {
+            UnaryOp::Neg => {
+                if !type_.is_signed() {
+                    return Err(format!("invalid unary operation: {}", unary_op));
+                }
+                let zero = Register::infer_zr(bytes);
+                // perform negation as 0 - term
+                self.fmt_bin_op(reg, zero, BinOp::Sub, reg, true);
+            }
+            UnaryOp::Not => {
+                match type_ {
+                    Type::Bool => (),
+                    _ => return Err(format!("invalid unary operation: {}", unary_op)),
+                }
+                // XOR value with 1 to produce negation
+                self.output
+                    .push_str(&format!("    eor {}, {}, #0x1\n", reg, reg,));
+            }
+        }
         // write value to stack if applicable
         if let None = reg_ix {
             self.push(reg, bytes);
@@ -378,7 +391,7 @@ impl Generator {
             NodeTerm::Bool(val) => self.gen_bool(*val, reg_ix),
             NodeTerm::Ident(name) => self.gen_ident(name, reg_ix),
             NodeTerm::Paren(expr) => self.gen_expr(expr.as_ref(), reg_ix),
-            NodeTerm::UnaryOp(term) => self.gen_unary_op(term.as_ref(), reg_ix),
+            NodeTerm::UnaryOp(unary_op) => self.gen_unary_op(unary_op, reg_ix),
         }
     }
 
@@ -421,7 +434,7 @@ impl Generator {
         // check that binop is valid
         if lhs_type != rhs_type {
             Err(format!(
-                "invalid operands in binary operation: [{}: {}] {} [{}: {}]",
+                "invalid binary operation: ({}: {}) {} ({}: {})",
                 bin_op.lhs.as_ref(),
                 lhs_type,
                 bin_op.op,

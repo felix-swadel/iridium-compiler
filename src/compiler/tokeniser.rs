@@ -174,10 +174,10 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
                         iter.next();
                         Some(Token::NonEquality)
                     } else {
-                        return Err("unexpected token: `!`".to_owned());
+                        Some(Token::Bang)
                     }
                 } else {
-                    return Err("unexpected token: `!`".to_owned());
+                    Some(Token::Bang)
                 }
             }
             '&' => {

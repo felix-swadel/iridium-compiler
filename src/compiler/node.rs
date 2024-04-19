@@ -4,13 +4,54 @@ use super::cpu::Type;
 use super::token::Token;
 
 // Expression Structure Nodes
+#[derive(Debug, Clone, Copy)]
+pub enum UnaryOp {
+    Neg,
+    Not,
+}
+
+impl UnaryOp {
+    pub fn from_token(token: &Token) -> UnaryOp {
+        match token {
+            Token::Minus => UnaryOp::Neg,
+            Token::Bang => UnaryOp::Not,
+            _ => panic!("tried to convert a non unary-op Token to a UnaryOp"),
+        }
+    }
+}
+
+impl std::fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                UnaryOp::Neg => "-",
+                UnaryOp::Not => "!",
+            }
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NodeUnaryOp {
+    pub op: UnaryOp,
+    pub term: Box<NodeTerm>,
+}
+
+impl std::fmt::Display for NodeUnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.op, self.term.as_ref())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum NodeTerm {
     Int32(i32),
     Ident(String),
     Bool(bool),
     Paren(Box<NodeExpr>),
-    UnaryOp(Box<NodeTerm>),
+    UnaryOp(NodeUnaryOp),
 }
 
 impl NodeTerm {
@@ -66,7 +107,7 @@ impl NodeTerm {
         match self {
             NodeTerm::Int32(_) | NodeTerm::Ident(_) | NodeTerm::Bool(_) => true,
             NodeTerm::Paren(expr) => expr.as_ref().is_atomic(),
-            NodeTerm::UnaryOp(term) => term.as_ref().is_atomic(),
+            NodeTerm::UnaryOp(unary_op) => unary_op.term.as_ref().is_atomic(),
         }
     }
 }
@@ -74,11 +115,11 @@ impl NodeTerm {
 impl std::fmt::Display for NodeTerm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NodeTerm::Int32(val) => write!(f, "{}", val),
-            NodeTerm::Bool(val) => write!(f, "{}", val),
-            NodeTerm::Ident(val) => write!(f, "{}", val),
-            NodeTerm::Paren(expr) => write!(f, "({})", expr.as_ref()),
-            NodeTerm::UnaryOp(term) => write!(f, "-{}", term.as_ref()),
+            NodeTerm::Int32(val) => val.fmt(f),
+            NodeTerm::Bool(val) => val.fmt(f),
+            NodeTerm::Ident(val) => val.fmt(f),
+            NodeTerm::Paren(expr) => expr.as_ref().fmt(f),
+            NodeTerm::UnaryOp(unary_op) => unary_op.fmt(f),
         }
     }
 }

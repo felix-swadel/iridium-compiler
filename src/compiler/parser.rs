@@ -59,30 +59,49 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn parse_term(&mut self) -> Result<NodeTerm, String> {
-        let (token, neg) = match self.try_consume(TokenId::Minus) {
-            // if try_consume returns Ok, we have iterated over Minus
-            Ok(_) => (self.get()?.to_owned(), true),
-            // otherwise peek() returns the current token
-            Err(_) => (self.get()?.to_owned(), false),
+        let mut token = self.get()?.to_owned();
+        let unary_op = match token {
+            Token::Minus => {
+                self.advance();
+                token = self.get()?.to_owned();
+                Some(UnaryOp::Neg)
+            }
+            Token::Bang => {
+                self.advance();
+                token = self.get()?.to_owned();
+                Some(UnaryOp::Not)
+            }
+            _ => None,
         };
         match token {
             Token::Int32(int_lit) => {
                 self.advance();
-                Ok(NodeTerm::Int32(if neg { -int_lit } else { int_lit }))
+                match unary_op {
+                    Some(op) => match op {
+                        UnaryOp::Neg => Ok(NodeTerm::Int32(-int_lit)),
+                        UnaryOp::Not => Err(format!("invalid unary operation: !{}", int_lit)),
+                    },
+                    None => Ok(NodeTerm::Int32(int_lit)),
+                }
             }
             Token::Bool(bl_lit) => {
-                if neg {
-                    return Err(format!("cannot negate unsigned expression: {}", bl_lit));
-                }
                 self.advance();
-                Ok(NodeTerm::Bool(bl_lit))
+                match unary_op {
+                    Some(op) => match op {
+                        UnaryOp::Not => Ok(NodeTerm::Bool(!bl_lit)),
+                        UnaryOp::Neg => Err(format!("invalid unary operation: -{}", bl_lit)),
+                    },
+                    None => Ok(NodeTerm::Bool(bl_lit)),
+                }
             }
             Token::Ident(ident) => {
                 self.advance();
-                if neg {
-                    Ok(NodeTerm::UnaryOp(Box::new(NodeTerm::Ident(ident))))
-                } else {
-                    Ok(NodeTerm::Ident(ident))
+                match unary_op {
+                    Some(op) => Ok(NodeTerm::UnaryOp(NodeUnaryOp {
+                        op,
+                        term: Box::new(NodeTerm::Ident(ident)),
+                    })),
+                    None => Ok(NodeTerm::Ident(ident)),
                 }
             }
             Token::OpenParen => {
@@ -94,10 +113,12 @@ impl<'a> Parser<'a> {
                     NodeExpr::Term(term) => term,
                     NodeExpr::BinOp(_) => NodeTerm::Paren(Box::new(expr)),
                 };
-                if neg {
-                    Ok(NodeTerm::UnaryOp(Box::new(term)))
-                } else {
-                    Ok(term)
+                match unary_op {
+                    Some(op) => Ok(NodeTerm::UnaryOp(NodeUnaryOp {
+                        op,
+                        term: Box::new(term),
+                    })),
+                    None => Ok(term),
                 }
             }
             _ => Err(format!("expected term, found: {:?}", token)),

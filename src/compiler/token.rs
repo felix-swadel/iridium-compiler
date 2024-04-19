@@ -24,6 +24,7 @@ pub enum Token {
     Star,
     FSlash,
     // logical operators
+    Bang,
     Equality,
     NonEquality,
     GreaterThan,
@@ -60,6 +61,7 @@ impl Token {
             Token::Minus => TokenId::Minus,
             Token::Star => TokenId::Star,
             Token::FSlash => TokenId::FSlash,
+            Token::Bang => TokenId::Bang,
             Token::Equality => TokenId::Equality,
             Token::NonEquality => TokenId::NonEquality,
             Token::GreaterThan => TokenId::GreaterThan,
@@ -123,6 +125,7 @@ pub enum TokenId {
     Star,
     FSlash,
     // logical operators
+    Bang,
     Equality,
     NonEquality,
     GreaterThan,
@@ -162,6 +165,7 @@ impl fmt::Display for TokenId {
                 TokenId::Minus => "`-`",
                 TokenId::Star => "`*`",
                 TokenId::FSlash => "`/`",
+                TokenId::Bang => "`!`",
                 TokenId::Equality => "`==`",
                 TokenId::NonEquality => "`!=`",
                 TokenId::GreaterThan => "`>`",
