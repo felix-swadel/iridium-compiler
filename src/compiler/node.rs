@@ -10,6 +10,7 @@ pub enum NodeTerm {
     Ident(String),
     Bool(bool),
     Paren(Box<NodeExpr>),
+    UnaryOp(Box<NodeTerm>),
 }
 
 impl NodeTerm {
@@ -35,6 +36,7 @@ impl NodeTerm {
                 }
                 NodeTerm::Ident(_) => Ok(None),
                 NodeTerm::Paren(_) => Ok(None),
+                NodeTerm::UnaryOp(_) => Ok(None),
             },
             NodeTerm::Bool(bl_1) => match other {
                 NodeTerm::Bool(bl_2) => match op {
@@ -52,9 +54,19 @@ impl NodeTerm {
                 }
                 NodeTerm::Ident(_) => Ok(None),
                 NodeTerm::Paren(_) => Ok(None),
+                NodeTerm::UnaryOp(_) => Ok(None),
             },
             NodeTerm::Ident(_) => Ok(None),
             NodeTerm::Paren(_) => Ok(None),
+            NodeTerm::UnaryOp(_) => Ok(None),
+        }
+    }
+
+    pub fn is_atomic(&self) -> bool {
+        match self {
+            NodeTerm::Int32(_) | NodeTerm::Ident(_) | NodeTerm::Bool(_) => true,
+            NodeTerm::Paren(expr) => expr.as_ref().is_atomic(),
+            NodeTerm::UnaryOp(term) => term.as_ref().is_atomic(),
         }
     }
 }
@@ -66,6 +78,7 @@ impl std::fmt::Display for NodeTerm {
             NodeTerm::Bool(val) => write!(f, "{}", val),
             NodeTerm::Ident(val) => write!(f, "{}", val),
             NodeTerm::Paren(expr) => write!(f, "({})", expr.as_ref()),
+            NodeTerm::UnaryOp(term) => write!(f, "-{}", term.as_ref()),
         }
     }
 }
@@ -103,12 +116,12 @@ impl BinOp {
         }
     }
 
-    pub fn get_instruction(&self) -> Result<&str, String> {
+    pub fn get_instruction(&self, signed: bool) -> Result<&str, String> {
         match self {
             BinOp::Add => Ok("add"),
             BinOp::Sub => Ok("sub"),
             BinOp::Mul => Ok("mul"),
-            BinOp::Div => Ok("udiv"),
+            BinOp::Div => Ok(if signed { "sdiv" } else { "udiv" }),
             BinOp::And => Ok("and"),
             BinOp::Or => Ok("orr"),
             _ => Err(format!(
@@ -193,6 +206,13 @@ impl NodeExpr {
 
     pub fn new_int(num: i32) -> NodeExpr {
         NodeExpr::Term(NodeTerm::Int32(num))
+    }
+
+    pub fn is_atomic(&self) -> bool {
+        match self {
+            NodeExpr::Term(term) => term.is_atomic(),
+            NodeExpr::BinOp(_) => false,
+        }
     }
 }
 

@@ -12,6 +12,13 @@ impl Type {
             Type::Bool => 1,
         }
     }
+
+    pub fn is_signed(&self) -> bool {
+        match self {
+            Type::Int32 => true,
+            Type::Bool => false,
+        }
+    }
 }
 
 impl std::fmt::Display for Type {
@@ -62,6 +69,8 @@ impl Var {
 pub enum Register {
     X(usize),
     W(usize),
+    XZR,
+    WZR,
 }
 
 impl Register {
@@ -81,6 +90,14 @@ impl Register {
     pub fn infer_default(bytes: usize) -> Register {
         Register::infer(bytes, Register::default_reg())
     }
+
+    pub fn infer_zr(bytes: usize) -> Register {
+        if bytes > 4 {
+            Register::XZR
+        } else {
+            Register::WZR
+        }
+    }
 }
 
 impl std::fmt::Display for Register {
@@ -88,6 +105,8 @@ impl std::fmt::Display for Register {
         match self {
             Register::W(val) => write!(f, "w{}", val),
             Register::X(val) => write!(f, "x{}", val),
+            Register::WZR => write!(f, "wzr"),
+            Register::XZR => write!(f, "xzr"),
         }
     }
 }

@@ -71,11 +71,12 @@ impl Generator {
 // formatting utilities
 impl Generator {
     fn fmt_bin_op(&mut self, dst: Register, lhs: Register, op: BinOp, rhs: Register) {
+    fn fmt_bin_op(&mut self, dst: Register, lhs: Register, op: BinOp, rhs: Register, signed: bool) {
         match op {
             BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div | BinOp::And | BinOp::Or => {
                 self.output.push_str(&format!(
                     "    {} {}, {}, {}\n",
-                    op.get_instruction().unwrap(),
+                    op.get_instruction(signed).unwrap(),
                     dst,
                     lhs,
                     rhs,
@@ -361,20 +362,40 @@ impl Generator {
         Ok(var.type_())
     }
 
+    fn gen_unary_op(&mut self, term: &NodeTerm, reg_ix: Option<usize>) -> TypeResult {
+        // ensure that this value isn't written to the stack
+        let reg = reg_ix.unwrap_or(Register::default_reg());
+        let type_ = self.gen_term(term, Some(reg))?;
+        if !type_.is_signed() {
+            return Err(format!("cannot negate unsigned expression: {}", term));
+        }
+        let bytes = type_.bytes();
+        let zero = Register::infer_zr(bytes);
+        let reg = Register::infer(bytes, reg);
+        // perform negation as 0 - term
+        self.fmt_bin_op(reg, zero, BinOp::Sub, reg, true);
+        // write value to stack if applicable
+        if let None = reg_ix {
+            self.push(reg, bytes);
+        }
+        Ok(type_)
+    }
+
     fn gen_term(&mut self, term: &NodeTerm, reg_ix: Option<usize>) -> TypeResult {
         match term {
             NodeTerm::Int32(val) => self.gen_int32(*val, reg_ix),
             NodeTerm::Bool(val) => self.gen_bool(*val, reg_ix),
             NodeTerm::Ident(name) => self.gen_ident(name, reg_ix),
             NodeTerm::Paren(expr) => self.gen_expr(expr.as_ref(), reg_ix),
+            NodeTerm::UnaryOp(term) => self.gen_unary_op(term.as_ref(), reg_ix),
         }
     }
 
     fn gen_bin_op_exprs(&mut self, bin_op: &NodeBinOp, lhs_ix: usize, rhs_ix: usize) -> TypeResult {
         let lhs = bin_op.lhs.as_ref();
         let rhs = bin_op.rhs.as_ref();
-        let (lhs_type, rhs_type) = if self.expr_is_atomic(lhs) {
-            if self.expr_is_atomic(rhs) {
+        let (lhs_type, rhs_type) = if lhs.is_atomic() {
+            if rhs.is_atomic() {
                 // both types are atomic
                 (
                     self.gen_expr(lhs, Some(lhs_ix))?,
@@ -388,7 +409,7 @@ impl Generator {
                 )
             }
         } else {
-            if self.expr_is_atomic(rhs) {
+            if rhs.is_atomic() {
                 // lhs is not atomic - generate it first
                 (
                     self.gen_expr(lhs, Some(lhs_ix))?,
@@ -431,11 +452,11 @@ impl Generator {
         match reg_ix {
             Some(ix) => {
                 let dst = Register::infer(out_bytes, ix);
-                self.fmt_bin_op(dst, lhs_reg, bin_op.op, rhs_reg);
+                self.fmt_bin_op(dst, lhs_reg, bin_op.op, rhs_reg, in_type.is_signed());
             }
             None => {
                 let dst = Register::infer_default(out_bytes);
-                self.fmt_bin_op(dst, lhs_reg, bin_op.op, rhs_reg);
+                self.fmt_bin_op(dst, lhs_reg, bin_op.op, rhs_reg, in_type.is_signed());
                 self.push(dst, out_bytes);
             }
         }

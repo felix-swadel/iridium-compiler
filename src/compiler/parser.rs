@@ -12,6 +12,10 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.idx)
     }
 
+    fn get(&self) -> Result<&Token, String> {
+        self.peek().ok_or("expected token, found EOF".to_owned())
+    }
+
     fn advance(&mut self) {
         self.idx += 1;
     }
@@ -55,31 +59,45 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn parse_term(&mut self) -> Result<NodeTerm, String> {
-        let token = match self.peek() {
-            Some(token) => token.clone(), // clone to avoid immutable borrow
-            None => return Err(String::from("ran out of tokens parsing term")),
+        let (token, neg) = match self.try_consume(TokenId::Minus) {
+            // if try_consume returns Ok, we have iterated over Minus
+            Ok(_) => (self.get()?.to_owned(), true),
+            // otherwise peek() returns the current token
+            Err(_) => (self.get()?.to_owned(), false),
         };
         match token {
             Token::Int32(int_lit) => {
                 self.advance();
-                Ok(NodeTerm::Int32(int_lit))
+                Ok(NodeTerm::Int32(if neg { -int_lit } else { int_lit }))
             }
             Token::Bool(bl_lit) => {
+                if neg {
+                    return Err(format!("cannot negate unsigned expression: {}", bl_lit));
+                }
                 self.advance();
                 Ok(NodeTerm::Bool(bl_lit))
             }
             Token::Ident(ident) => {
                 self.advance();
-                Ok(NodeTerm::Ident(ident))
+                if neg {
+                    Ok(NodeTerm::UnaryOp(Box::new(NodeTerm::Ident(ident))))
+                } else {
+                    Ok(NodeTerm::Ident(ident))
+                }
             }
             Token::OpenParen => {
                 self.advance();
                 let expr = self.parse_expr(0)?;
                 self.try_consume(TokenId::CloseParen)?;
                 // simplify the parens to a basic term if possible
-                match expr {
-                    NodeExpr::Term(term) => Ok(term),
-                    NodeExpr::BinOp(_) => Ok(NodeTerm::Paren(Box::new(expr))),
+                let term = match expr {
+                    NodeExpr::Term(term) => term,
+                    NodeExpr::BinOp(_) => NodeTerm::Paren(Box::new(expr)),
+                };
+                if neg {
+                    Ok(NodeTerm::UnaryOp(Box::new(term)))
+                } else {
+                    Ok(term)
                 }
             }
             _ => Err(format!("expected term, found: {:?}", token)),
