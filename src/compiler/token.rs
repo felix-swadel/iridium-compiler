@@ -13,7 +13,7 @@ pub enum Token {
     Break,
     // values
     Ident(String),
-    Int32(u32),
+    Int32(i32),
     Bool(bool),
     // type names
     Int32Name,

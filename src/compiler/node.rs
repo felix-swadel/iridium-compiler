@@ -6,7 +6,7 @@ use super::token::Token;
 // Expression Structure Nodes
 #[derive(Debug, Clone)]
 pub enum NodeTerm {
-    Int32(u32),
+    Int32(i32),
     Ident(String),
     Bool(bool),
     Paren(Box<NodeExpr>),
@@ -191,7 +191,7 @@ impl NodeExpr {
         }
     }
 
-    pub fn new_int(num: u32) -> NodeExpr {
+    pub fn new_int(num: i32) -> NodeExpr {
         NodeExpr::Term(NodeTerm::Int32(num))
     }
 }

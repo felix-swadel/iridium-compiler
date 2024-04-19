@@ -91,7 +91,7 @@ impl Generator {
         }
     }
 
-    fn fmt_move_int32(&mut self, reg: Register, val: u32) {
+    fn fmt_move_int32(&mut self, reg: Register, val: i32) {
         self.output
             .push_str(&format!("    mov {}, #{}\n", reg, val,));
     }
@@ -220,7 +220,7 @@ impl Generator {
         }
     }
 
-    fn move_int32(&mut self, reg: Register, val: u32) {
+    fn move_int32(&mut self, reg: Register, val: i32) {
         self.fmt_move_int32(reg, val);
     }
 
@@ -321,7 +321,7 @@ impl Generator {
 // pushed to the stack unless a register is explicitly specified
 // for the result
 impl Generator {
-    fn gen_int32(&mut self, val: u32, reg_ix: Option<usize>) -> TypeResult {
+    fn gen_int32(&mut self, val: i32, reg_ix: Option<usize>) -> TypeResult {
         match reg_ix {
             Some(ix) => self.move_int32(Register::W(ix), val),
             None => {

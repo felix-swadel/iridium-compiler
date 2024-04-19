@@ -86,7 +86,7 @@ impl TokenBuf {
         assert_ne!(self.buf_type, BufType::Unset);
         match self.buf_type {
             BufType::Number => {
-                let num = match self.buf.parse() {
+                let num = match self.buf.parse::<i32>() {
                     Ok(num) => num,
                     Err(_) => panic!("couldn't parse string to u32: {}", self.buf),
                 };
