@@ -17,11 +17,12 @@ pub struct Generator {
     top_level_exit_found: bool,
     // stack management
     vars: Vec<Var>,
-    scopes: Vec<usize>,
     // bytes written to the stack
     stack_length: usize,
     // bytes allocated on the stack
     stack_capacity: usize,
+    frame_pointer: usize,
+    scope_pointer: usize,
     // label management
     condition_counter: usize,
     loop_counter: usize,
@@ -36,9 +37,10 @@ impl Generator {
             output: String::new(),
             top_level_exit_found: false,
             vars: Vec::new(),
-            scopes: Vec::new(),
             stack_length: 0,
             stack_capacity: 0,
+            frame_pointer: 0,
+            scope_pointer: 0,
             condition_counter: 0,
             loop_counter: 0,
             while_counter: 0,
@@ -245,37 +247,26 @@ impl Generator {
 
 // variable management
 impl Generator {
-    fn find_var(&self, name: &str) -> Option<&Var> {
+    fn find_var(&self, name: &str, address_bound: usize) -> Option<&Var> {
         // reverse iterate to allow shadowing
-        self.vars.iter().rev().find(|&v| v.name() == name)
+        for var in self.vars.iter().rev() {
+            if var.location() <= address_bound {
+                break;
+            }
+            if var.name() == name {
+                return Some(var);
+            }
+        }
+        None
+    }
+
+    fn find_var_in_frame(&self, name: &str) -> Option<&Var> {
+        self.find_var(name, self.frame_pointer)
     }
 
     // useful for checking if a var already exists in this scope for assignment
     fn find_var_in_scope(&self, name: &str) -> Option<&Var> {
-        match self.scopes.last() {
-            Some(scope_start) => {
-                for var in self.vars.iter().rev() {
-                    if var.location() <= *scope_start {
-                        break;
-                    }
-                    if var.name() == name {
-                        return Some(var);
-                    }
-                }
-                None
-            }
-            None => self.find_var(name),
-        }
-    }
-
-    fn expr_is_atomic(&self, expr: &NodeExpr) -> bool {
-        match expr {
-            NodeExpr::Term(term) => match term {
-                NodeTerm::Bool(_) | NodeTerm::Int32(_) | NodeTerm::Ident(_) => true,
-                NodeTerm::Paren(expr) => self.expr_is_atomic(expr),
-            },
-            NodeExpr::BinOp(_) => false,
-        }
+        self.find_var(name, self.scope_pointer)
     }
 }
 
@@ -346,7 +337,7 @@ impl Generator {
     }
 
     fn gen_ident(&mut self, name: &str, reg_ix: Option<usize>) -> TypeResult {
-        let var = match self.find_var(name) {
+        let var = match self.find_var_in_frame(name) {
             Some(var) => var.clone(),
             None => return Err(format!("undeclared identifier: {}", name)),
         };
@@ -493,7 +484,7 @@ impl Generator {
     fn gen_assign(&mut self, node_assign: &NodeAssign) -> GenResult {
         let ident = &node_assign.ident;
         // check that identifier already exists
-        let var = match self.find_var(ident) {
+        let var = match self.find_var_in_frame(ident) {
             Some(var) => var.clone(),
             None => return Err(format!("undeclared identifier: {}", ident)),
         };
@@ -528,13 +519,17 @@ impl Generator {
     }
 
     fn gen_scope(&mut self, node_scope: &NodeScope) -> GenResult {
-        // store stack pointer at start of scope
-        self.scopes.push(self.stack_length);
+        // store outer scope start so that it can be restored later
+        let prev_scope_start = self.scope_pointer;
+        // set the current scope start to the stack length
+        self.scope_pointer = self.stack_length;
         for stmt in node_scope.stmts.iter() {
             self.gen_stmt(stmt)?;
         }
-        // restore stack pointer from before scope
-        self.stack_length = self.scopes.pop().unwrap();
+        // restore the stack length to what it was before the scope
+        self.stack_length = self.scope_pointer;
+        // restore the outer scope start value
+        self.scope_pointer = prev_scope_start;
         // remove any vars local to the scope
         for (ix, var) in self.vars.iter().rev().enumerate() {
             if var.location() > self.stack_length {
