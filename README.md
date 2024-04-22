@@ -64,9 +64,27 @@ while y < 100 {
 }
 ```
 
+### Functions
+
+Functions take typed arguments and must return a single typed value. E.g.
+
+```
+fn operate(x: i32, y: i32, sub: bool) i32 {
+    if sub {
+        return x - y;
+    } else {
+        return x + y;
+    }
+}
+
+let val = operate(3, 4, false);
+```
+
+Currently the logic surrounding returns is a bit messy. Also, functions which call functions aren't supported - currently the arguments of the outer function are overwritten.
+
 ## TODO:
 
-- Add unary operators.
 - Add assignment operators (e.g. `+=`).
 - Add `print` built-in.
-- Add functions.
+- Add function definition post-processor which determines where we need to include the assembly `ret` statement. This gets complicated when there is branching involved and not all branches necessarily contain returns.
+- Add support for functions which call other functions by pushing the calling function's arguments to the stack.
