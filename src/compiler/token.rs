@@ -11,6 +11,8 @@ pub enum Token {
     While,
     Continue,
     Break,
+    Fn,
+    Return,
     // values
     Ident(String),
     Int32(i32),
@@ -39,6 +41,7 @@ pub enum Token {
     OpenCurly,
     CloseCurly,
     Equals,
+    Comma,
 }
 
 impl Token {
@@ -52,6 +55,8 @@ impl Token {
             Token::Continue => TokenId::Continue,
             Token::Break => TokenId::Break,
             Token::While => TokenId::While,
+            Token::Fn => TokenId::Fn,
+            Token::Return => TokenId::Return,
             Token::Ident(_) => TokenId::Ident,
             Token::Int32(_) => TokenId::Int32,
             Token::Bool(_) => TokenId::Bool,
@@ -75,6 +80,7 @@ impl Token {
             Token::OpenCurly => TokenId::OpenCurly,
             Token::CloseCurly => TokenId::CloseCurly,
             Token::Equals => TokenId::Equals,
+            Token::Comma => TokenId::Comma,
         }
     }
 
@@ -112,6 +118,8 @@ pub enum TokenId {
     Continue,
     Break,
     While,
+    Fn,
+    Return,
     // values
     Ident,
     Int32,
@@ -140,6 +148,7 @@ pub enum TokenId {
     OpenCurly,
     CloseCurly,
     Equals,
+    Comma,
 }
 
 impl fmt::Display for TokenId {
@@ -156,6 +165,8 @@ impl fmt::Display for TokenId {
                 TokenId::While => "`while`",
                 TokenId::Continue => "`continue`",
                 TokenId::Break => "`break`",
+                TokenId::Fn => "`fn`",
+                TokenId::Return => "`return`",
                 TokenId::Ident => "<identifier>",
                 TokenId::Int32 => "<integer-literal>",
                 TokenId::Bool => "<bool>",
@@ -179,6 +190,7 @@ impl fmt::Display for TokenId {
                 TokenId::OpenCurly => "`{`",
                 TokenId::CloseCurly => "`}`",
                 TokenId::Equals => "`=`",
+                TokenId::Comma => "`,`",
             }
         )
     }

@@ -53,18 +53,16 @@ fn main() {
     // parse source code
     println!("Parsing source code...");
     let mut parser = Parser::new(&tokens);
-    let node_prog = match parser.parse() {
-        Ok(node_prog) => node_prog,
-        Err(e) => {
-            println!("Failed to parse {}: {}", filepath_str, e);
-            return;
-        }
-    };
+    if let Err(e) = parser.parse() {
+        println!("Failed to parse {}: {}", filepath_str, e);
+        return;
+    }
+    let node_prog = parser.output();
 
     // generate ARM64 assembly
     println!("Generating ARM64 assembly...");
-    let mut generator = Generator::new();
-    if let Err(e) = generator.generate(&node_prog) {
+    let mut generator = Generator::new(node_prog);
+    if let Err(e) = generator.generate() {
         println!("Failed to generate code for {}: {}", filepath_str, e);
         return;
     }

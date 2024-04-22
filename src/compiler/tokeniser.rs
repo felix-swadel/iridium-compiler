@@ -12,6 +12,8 @@ const KEYWORDS: Map<&'static str, Token> = phf_map! {
     "while" => Token::While,
     "continue" => Token::Continue,
     "break" => Token::Break,
+    "fn" => Token::Fn,
+    "return" => Token::Return,
     "true" => Token::Bool(true),
     "false" => Token::Bool(false),
     "i32" => Token::Int32Name,
@@ -155,6 +157,7 @@ pub fn tokenise(text: &String) -> Result<Vec<Token>, String> {
             ')' => Some(Token::CloseParen),
             '{' => Some(Token::OpenCurly),
             '}' => Some(Token::CloseCurly),
+            ',' => Some(Token::Comma),
             // operators with multiple characters
             '=' => {
                 if let Some(next_c) = iter.peek() {

@@ -34,17 +34,17 @@ impl std::fmt::Display for Type {
 }
 
 #[derive(Debug, Clone)]
-pub struct Var {
+pub struct StackVar {
     name: String,
     // num bytes from the top of the stack
     location: usize,
     type_: Type,
 }
 
-impl Var {
-    pub fn new(name: &str, location: usize, type_: Type) -> Var {
+impl StackVar {
+    pub fn new(name: &str, location: usize, type_: Type) -> StackVar {
         // variables can take up one or two doublewords
-        Var {
+        StackVar {
             name: name.to_owned(),
             location,
             type_,
@@ -59,8 +59,8 @@ impl Var {
         self.location
     }
 
-    pub fn type_(&self) -> Type {
-        self.type_
+    pub fn type_(&self) -> &Type {
+        &self.type_
     }
 
     pub fn bytes(&self) -> usize {
@@ -68,12 +68,72 @@ impl Var {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
+pub struct Arg {
+    name: String,
+    register: Register,
+    type_: Type,
+}
+
+impl Arg {
+    pub fn new(name: String, reg_ix: usize, type_: Type) -> Result<Arg, String> {
+        if reg_ix > 8 {
+            Err("function has too many args, max is 9".to_owned())
+        } else {
+            Ok(Arg {
+                name,
+                register: Register::infer(type_.bytes(), reg_ix),
+                type_,
+            })
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn register(&self) -> &Register {
+        &self.register
+    }
+
+    pub fn type_(&self) -> &Type {
+        &self.type_
+    }
+
+    pub fn bytes(&self) -> usize {
+        self.type_.bytes()
+    }
+}
+
+#[derive(Debug)]
+pub enum Value {
+    Arg(Arg),
+    StackVar(StackVar),
+}
+
+impl Value {
+    pub fn type_(&self) -> &Type {
+        match self {
+            Value::Arg(arg) => arg.type_(),
+            Value::StackVar(var) => var.type_(),
+        }
+    }
+
+    pub fn bytes(&self) -> usize {
+        match self {
+            Value::Arg(arg) => arg.bytes(),
+            Value::StackVar(var) => var.bytes(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Register {
     X(usize),
     W(usize),
     XZR,
     WZR,
+    SP,
 }
 
 impl Register {
@@ -108,8 +168,9 @@ impl std::fmt::Display for Register {
         match self {
             Register::W(val) => write!(f, "w{}", val),
             Register::X(val) => write!(f, "x{}", val),
-            Register::WZR => write!(f, "wzr"),
-            Register::XZR => write!(f, "xzr"),
+            Register::WZR => "wzr".fmt(f),
+            Register::XZR => "xzr".fmt(f),
+            Register::SP => "sp".fmt(f),
         }
     }
 }

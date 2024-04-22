@@ -1,6 +1,7 @@
 use std::boxed::Box;
+use std::collections::HashMap;
 
-use super::cpu::Type;
+use super::cpu::{Arg, Type};
 use super::token::Token;
 
 // Expression Structure Nodes
@@ -8,16 +9,6 @@ use super::token::Token;
 pub enum UnaryOp {
     Neg,
     Not,
-}
-
-impl UnaryOp {
-    pub fn from_token(token: &Token) -> UnaryOp {
-        match token {
-            Token::Minus => UnaryOp::Neg,
-            Token::Bang => UnaryOp::Not,
-            _ => panic!("tried to convert a non unary-op Token to a UnaryOp"),
-        }
-    }
 }
 
 impl std::fmt::Display for UnaryOp {
@@ -46,12 +37,33 @@ impl std::fmt::Display for NodeUnaryOp {
 }
 
 #[derive(Debug, Clone)]
+pub struct NodeFnCall {
+    pub name: String,
+    pub args: Vec<NodeExpr>,
+}
+
+impl std::fmt::Display for NodeFnCall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.args.is_empty() {
+            write!(f, "{}()", self.name)
+        } else {
+            write!(f, "{}(", self.name)?;
+            for i in 0..self.args.len() - 1 {
+                write!(f, "{}, ", self.args.get(i).unwrap())?;
+            }
+            write!(f, "{})", self.args.last().unwrap())
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum NodeTerm {
     Int32(i32),
     Ident(String),
     Bool(bool),
     Paren(Box<NodeExpr>),
     UnaryOp(NodeUnaryOp),
+    FnCall(NodeFnCall),
 }
 
 impl NodeTerm {
@@ -78,6 +90,7 @@ impl NodeTerm {
                 NodeTerm::Ident(_) => Ok(None),
                 NodeTerm::Paren(_) => Ok(None),
                 NodeTerm::UnaryOp(_) => Ok(None),
+                NodeTerm::FnCall(_) => Ok(None),
             },
             NodeTerm::Bool(bl_1) => match other {
                 NodeTerm::Bool(bl_2) => match op {
@@ -96,10 +109,12 @@ impl NodeTerm {
                 NodeTerm::Ident(_) => Ok(None),
                 NodeTerm::Paren(_) => Ok(None),
                 NodeTerm::UnaryOp(_) => Ok(None),
+                NodeTerm::FnCall(_) => Ok(None),
             },
             NodeTerm::Ident(_) => Ok(None),
             NodeTerm::Paren(_) => Ok(None),
             NodeTerm::UnaryOp(_) => Ok(None),
+            NodeTerm::FnCall(_) => Ok(None),
         }
     }
 
@@ -108,6 +123,7 @@ impl NodeTerm {
             NodeTerm::Int32(_) | NodeTerm::Ident(_) | NodeTerm::Bool(_) => true,
             NodeTerm::Paren(expr) => expr.as_ref().is_atomic(),
             NodeTerm::UnaryOp(unary_op) => unary_op.term.as_ref().is_atomic(),
+            NodeTerm::FnCall(_) => false,
         }
     }
 }
@@ -120,6 +136,7 @@ impl std::fmt::Display for NodeTerm {
             NodeTerm::Ident(val) => val.fmt(f),
             NodeTerm::Paren(expr) => expr.as_ref().fmt(f),
             NodeTerm::UnaryOp(unary_op) => unary_op.fmt(f),
+            NodeTerm::FnCall(fn_call) => fn_call.fmt(f),
         }
     }
 }
@@ -308,6 +325,19 @@ pub struct NodeWhile {
     pub scope: NodeScope,
 }
 
+#[derive(Debug)]
+pub struct NodeFnDef {
+    pub name: String,
+    pub args: Vec<Arg>,
+    pub ret: Type,
+    pub scope: NodeScope,
+}
+
+#[derive(Debug)]
+pub struct NodeReturn {
+    pub expr: NodeExpr,
+}
+
 // Program Structure Nodes
 #[derive(Debug)]
 pub enum NodeStmt {
@@ -320,9 +350,12 @@ pub enum NodeStmt {
     While(NodeWhile),
     Continue,
     Break,
+    FnDef(NodeFnDef),
+    Return(NodeReturn),
 }
 
 #[derive(Debug, Default)]
 pub struct NodeProg {
     pub stmts: Vec<NodeStmt>,
+    pub fns: HashMap<String, NodeFnDef>,
 }
