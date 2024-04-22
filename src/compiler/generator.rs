@@ -653,6 +653,10 @@ impl<'a> Generator<'a> {
         self.scope_pointer = self.stack_length;
         for stmt in node_scope.stmts.iter() {
             self.gen_stmt(stmt, false)?;
+            // stop generating if we find a return
+            if let NodeStmt::Return(_) = stmt {
+                break;
+            }
         }
         // restore the stack length to what it was before the scope
         self.stack_length = self.scope_pointer;
@@ -840,6 +844,9 @@ impl<'a> Generator<'a> {
     }
 
     fn gen_return(&mut self, node_return: &NodeReturn) -> GenResult {
+        if let None = self.fn_context {
+            return Err("found `return` outside of fn definition".to_owned());
+        }
         self.gen_expr(&node_return.expr, Some(0))?;
         self.output.push_str("    ret\n");
         Ok(())
