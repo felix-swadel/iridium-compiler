@@ -18,7 +18,7 @@ Currently positive `int-32` and `bool` are supported. Types are always inferred.
 
 ### Operators
 
-All operators are binary. `+`, `-`, `*`, `/`, `<`, `>`, `==`, `!=`, `&&`, `||` are supported.
+Binary operators `+`, `-`, `*`, `/`, `<`, `>`, `==`, `!=`, `&&`, `||` and unary operators `-`, `!` are supported.
 
 ### Variables
 
